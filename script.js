@@ -1,6 +1,5 @@
 // ============================================
 // REGALO 3D - VERSIÓN FINAL CON GIF + MÚSICA
-// (con alphaPass para ver el GIF a través del canvas)
 // ============================================
 
 let scene, camera, renderer, composer, bloomPass;
@@ -120,13 +119,13 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(DPR);
     renderer.setClearColor(0x000000, 0);
-    renderer.setClearAlpha(0); // ⭐ Transparente
+    renderer.setClearAlpha(0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     renderer.domElement.style.touchAction = 'none';
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // ⭐ RENDER TARGET CON ALPHA
+    // Render target con alpha
     const renderTarget = new THREE.WebGLRenderTarget(
         window.innerWidth,
         window.innerHeight,
@@ -144,35 +143,10 @@ function init() {
         CONFIG.bloomIntensidad, 0.6, 0.95
     );
 
-    // ⭐⭐⭐ PASS FINAL: reconstruye el canal alpha desde la luminancia ⭐⭐⭐
-    // Hace que todo lo oscuro del canvas sea transparente → el GIF de detrás se ve.
-    const alphaPass = new THREE.ShaderPass({
-        uniforms: { tDiffuse: { value: null } },
-        vertexShader: `
-            varying vec2 vUv;
-            void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform sampler2D tDiffuse;
-            varying vec2 vUv;
-            void main() {
-                vec4 c = texture2D(tDiffuse, vUv);
-                float lum = max(c.r, max(c.g, c.b));
-                // Zonas oscuras → alpha 0 (se ve el GIF). Zonas brillantes → alpha 1.
-                float a = smoothstep(0.02, 0.35, lum);
-                gl_FragColor = vec4(c.rgb, a);
-            }
-        `
-    });
-    alphaPass.renderToScreen = true;
-
     composer = new THREE.EffectComposer(renderer, renderTarget);
     composer.addPass(renderScene);
     composer.addPass(bloomPass);
-    composer.addPass(alphaPass); // 👈 AL FINAL (es el que se muestra en pantalla)
+    // (el alpha final lo maneja mix-blend-mode: screen del CSS)
 
     configurarLuces();
     crearEstrellas();

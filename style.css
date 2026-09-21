@@ -14,7 +14,7 @@
     opacity: 0.30;                              /* 👈 subido de 0.30 */
     pointer-events: none;
     object-fit: cover;
-    filter: blur(1.5px) brightness(0.85);       /* 👈 brightness subido de 0.55 */
+    filter: blur(1.5px) brightness(0.55);       /* 👈 brightness subido de 0.55 */
 }
 
 html, body {

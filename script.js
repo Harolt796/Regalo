@@ -1,5 +1,5 @@
 // ============================================
-// REGALO 3D - VERSIÓN FINAL CON CINEMÁTICA DE CORAZÓN
+// REGALO 3D - VERSIÓN FINAL CON DESAFÍO ÉPICO + CINEMÁTICA
 // ============================================
 
 let scene, camera, renderer, composer, bloomPass;
@@ -28,6 +28,7 @@ let faseFinal = 0;
 let codigoColores = [];
 let secuenciaUsuario = [];
 let esferasFinales = [];
+let desafioEpicoActivo = false; // ⭐ Desafío después de la foto 5
 
 // === CINEMÁTICA FINAL DEL CORAZÓN ===
 let corazonParticulas = null;
@@ -603,7 +604,13 @@ function iniciarTimer(segundos) {
                 objetivos = [];
                 el.classList.add('oculto');
                 document.getElementById('hud-texto').textContent = 'Reiniciando desafío...';
-                setTimeout(() => lanzarDesafio(indiceFoto), 900);
+                
+                // Si es el desafío épico, reiniciarlo, si no, lanzar el desafío normal
+                if (desafioEpicoActivo) {
+                    setTimeout(() => iniciarDesafioEpico(), 900);
+                } else {
+                    setTimeout(() => lanzarDesafio(indiceFoto), 900);
+                }
             }, 900);
         }
     }, 1000);
@@ -730,11 +737,19 @@ function onObjetivoClick(obj) {
             objetivos.forEach(o => { if (o.parent) scene.remove(o); });
             objetivos = [];
             
-            // ⚠️ FIX: Si estamos en el desafío final FASE 1, avanzar a FASE 2 (memorizar)
-            if (indiceFoto === 4 && faseFinal === 1) {
+            // ⭐ CASO 1: Desafío épico (después de la foto 5) → Cinemática
+            if (desafioEpicoActivo) {
+                desafioEpicoActivo = false;
+                document.getElementById('hud-texto').textContent = '💖 ¡El amor todo lo puede! 💖';
+                setTimeout(() => {
+                    iniciarCinematicaCorazon();
+                }, 1500);
+            }
+            // ⭐ CASO 2: FASE 1 del desafío final → FASE 2 (memorizar)
+            else if (indiceFoto === 4 && faseFinal === 1) {
                 iniciarFaseMemorizar();
             }
-            // Si NO es la última foto, avanzar a la siguiente foto normal
+            // ⭐ CASO 3: Niveles 1-4 → siguiente foto
             else if (indiceFoto < 4) {
                 if (fotoActual) scene.remove(fotoActual);
                 fotoActual = null;
@@ -746,7 +761,7 @@ function onObjetivoClick(obj) {
 }
 
 // ============================================
-// DESAFÍO FINAL
+// DESAFÍO FINAL (FASES 1, 2, 3)
 // ============================================
 function iniciarDesafioFinal() {
     faseFinal = 1;
@@ -791,7 +806,7 @@ function iniciarFaseMemorizar() {
     codigoColores = [];
     const copia = [...colores];
     for (let i = 0; i < 4; i++) {
-            const idx = Math.floor(Math.random() * copia.length);
+        const idx = Math.floor(Math.random() * copia.length);
         codigoColores.push(copia[idx]);
         copia.splice(idx, 1);
     }
@@ -914,6 +929,9 @@ function onEsferaFinalClick(esfera) {
     }
 }
 
+// ============================================
+// REVELAR FOTO 5 → Después viene el DESAFÍO ÉPICO
+// ============================================
 function revelarFotoFinal() {
     esferasFinales.forEach(e => { if (e.parent) scene.remove(e); });
     esferasFinales = [];
@@ -924,12 +942,63 @@ function revelarFotoFinal() {
         if (fotoActual) scene.remove(fotoActual);
         mostrarFoto(4);
         
-        // La cinemática del corazón aparece 8 segundos después
+        // ⭐ Después de 5 segundos, lanzar el DESAFÍO ÉPICO (NO la cinemática directa)
         setTimeout(() => {
-            iniciarCinematicaCorazon();
-        }, 8000);
+            iniciarDesafioEpico();
+        }, 5000);
         
     }, 700);
+}
+
+// ============================================
+// 🎯 DESAFÍO ÉPICO (después de la foto 5)
+// ============================================
+function iniciarDesafioEpico() {
+    console.log('>>> Iniciando desafío épico');
+    desafioEpicoActivo = true;
+    objetivos = [];
+    objetivosTotales = 10;
+    objetivosRestantes = 10;
+    actualizarContador();
+    document.getElementById('hud-nivel').textContent = '💖 DESAFÍO FINAL';
+    document.getElementById('hud-icono').textContent = '💖';
+    document.getElementById('hud-texto').textContent = 'Rompe los 10 corazones antes del tiempo';
+    estado = 'desafio';
+    
+    // Hacer visible el HUD otra vez
+    document.getElementById('hud').classList.add('visible');
+    document.getElementById('progreso').classList.add('visible');
+
+    iniciarTimer(25);
+
+    // Distribuir 10 corazones en 2 anillos concéntricos
+    const posiciones = [];
+    for (let i = 0; i < 10; i++) {
+        const anillo = i < 5 ? 1 : 2;
+        const idx = i < 5 ? i : i - 5;
+        const radio = anillo === 1 ? 10 : 20;
+        const angulo = (idx / 5) * Math.PI * 2 + (anillo === 2 ? Math.PI / 5 : 0);
+        posiciones.push({
+            x: Math.cos(angulo) * radio,
+            y: Math.sin(angulo) * radio * 0.6,
+            z: 8
+        });
+    }
+
+    posiciones.forEach((p, i) => {
+        const obj = crearObjetivo('corazon', i);
+        obj.position.set(p.x, p.y, p.z);
+        obj.userData.baseX = p.x;
+        obj.userData.baseY = p.y;
+        obj.userData.baseZ = p.z;
+        obj.userData.escalaBase = 0;
+        obj.userData.mov = 'orbitaRapida';
+        obj.userData.offsetFlot = Math.random() * 6;
+        obj.userData.phase = (i / 10) * Math.PI * 2;
+        obj.userData.rotVel = 0.025;
+        scene.add(obj);
+        objetivos.push(obj);
+    });
 }
 
 // ============================================
@@ -1329,7 +1398,7 @@ function animar() {
             fotoActual.userData.textoEscrito = true;
             escribirTexto(indiceFoto);
             
-            // ⚠️ SOLO lanzar desafío si NO es la foto final
+            // ⚠️ SOLO lanzar desafío para fotos 0-3 (NUNCA para foto 4)
             if (indiceFoto < 4) {
                 setTimeout(() => {
                     if (estado === 'mostrandoFoto') {

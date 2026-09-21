@@ -21,29 +21,41 @@
 
     <div id="canvas-container"></div>
 
+    <!-- Barra de instrucciones superior -->
+    <div id="hud">
+        <div id="hud-icono">🎯</div>
+        <div id="hud-texto">Haz clic en los 3 corazones</div>
+        <div id="hud-contador">0 / 3</div>
+    </div>
+
+    <!-- Puntos de progreso de fotos -->
+    <div id="progreso">
+        <div class="punto"></div>
+        <div class="punto"></div>
+        <div class="punto"></div>
+        <div class="punto"></div>
+        <div class="punto"></div>
+    </div>
+
+    <!-- Título y texto de la historia -->
     <div id="historia">
         <h1 id="historia-titulo"></h1>
         <p id="historia-texto"></p>
     </div>
 
-    <div id="progreso">
-        <div class="punto" data-i="0"></div>
-        <div class="punto" data-i="1"></div>
-        <div class="punto" data-i="2"></div>
-        <div class="punto" data-i="3"></div>
-        <div class="punto" data-i="4"></div>
+    <!-- Pantalla de bienvenida -->
+    <div id="intro">
+        <div class="intro-panel">
+            <h1>Bienvenida ❤️</h1>
+            <p>Este es un pequeño universo hecho para ti.</p>
+            <p>Para ver cada foto, tendrás que completar un desafío. ¡Vamos!</p>
+            <button id="btn-empezar">Empezar ✨</button>
+        </div>
     </div>
 
-    <div id="instruccion">
-        <p id="instruccion-texto">Observa la magia ✨</p>
-    </div>
-
-    <div id="contador" class="oculto">
-        <span id="contador-numero"></span>
-    </div>
-
-    <div id="codigo-desafio" class="oculto">
-        <p>Memoriza el orden:</p>
+    <!-- Código del desafío final -->
+    <div id="codigo" class="oculto">
+        <p>MEMORIZA EL ORDEN</p>
         <div id="codigo-colores"></div>
     </div>
 

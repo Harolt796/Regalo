@@ -3,9 +3,17 @@
 html, body {
     background: #000;
     overflow: hidden;
-    height: 100vh; width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
     font-family: 'Georgia', serif;
-    cursor: crosshair;
+    cursor: pointer;
+    /* CRÍTICO para móvil */
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
 }
 
 #canvas-container {
@@ -15,63 +23,102 @@ html, body {
     z-index: 1;
 }
 
-/* HUD superior - Instrucciones */
+/* ============ HUD SUPERIOR ============ */
 #hud {
     position: fixed;
-    top: 20px;
+    top: 15px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
-    background: rgba(15, 5, 20, 0.9);
+    background: rgba(15, 5, 20, 0.92);
     border: 2px solid #ffd700;
-    border-radius: 50px;
-    padding: 12px 30px;
+    border-radius: 20px;
+    padding: 10px 20px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: 6px;
     backdrop-filter: blur(15px);
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
     opacity: 0;
     transition: opacity 0.5s ease;
-    max-width: 90%;
+    max-width: 94%;
+    min-width: 280px;
 }
 
 #hud.visible { opacity: 1; }
 
+#hud-nivel {
+    color: #ffd700;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+
 #hud-icono {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
+    line-height: 1;
 }
 
 #hud-texto {
     color: #ffffff;
-    font-size: 1rem;
-    letter-spacing: 1px;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
     font-family: Arial, sans-serif;
+    text-align: center;
+    line-height: 1.3;
+}
+
+#hud-info {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 215, 0, 0.3);
+    width: 100%;
+    justify-content: center;
 }
 
 #hud-contador {
     color: #ffd700;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: bold;
     text-shadow: 0 0 15px #ffd700;
     font-family: 'Courier New', monospace;
-    padding-left: 12px;
-    border-left: 2px solid rgba(255, 215, 0, 0.3);
-    min-width: 60px;
-    text-align: right;
 }
 
-/* Puntos de progreso */
+#hud-timer {
+    color: #ff4d6d;
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-shadow: 0 0 15px #ff4d6d;
+    font-family: 'Courier New', monospace;
+}
+
+#hud-timer.oculto { display: none; }
+
+#hud-timer.alerta {
+    animation: pulsar 0.5s infinite;
+}
+
+@keyframes pulsar {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.15); }
+}
+
+/* ============ PROGRESO ============ */
 #progreso {
     position: fixed;
-    bottom: 30px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
     display: flex;
-    gap: 15px;
+    gap: 12px;
     padding: 10px 20px;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     border-radius: 30px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 77, 109, 0.3);
@@ -82,8 +129,8 @@ html, body {
 #progreso.visible { opacity: 1; }
 
 .punto {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.15);
     transition: all 0.5s ease;
@@ -91,50 +138,50 @@ html, body {
 
 .punto.activo {
     background: #ff4d6d;
-    box-shadow: 0 0 20px #ff4d6d, 0 0 40px #ff4d6d;
+    box-shadow: 0 0 15px #ff4d6d;
     transform: scale(1.4);
 }
 
 .punto.completado {
     background: #ffd700;
-    box-shadow: 0 0 15px #ffd700;
+    box-shadow: 0 0 10px #ffd700;
 }
 
-/* Historia (título y texto) */
+/* ============ HISTORIA ============ */
 #historia {
     position: fixed;
-    bottom: 90px;
+    bottom: 70px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
     text-align: center;
     width: 90%;
-    max-width: 700px;
+    max-width: 600px;
     opacity: 0;
     transition: opacity 1s ease;
     pointer-events: none;
+    padding: 0 15px;
 }
 
 #historia.visible { opacity: 1; }
 
 #historia-titulo {
-    font-size: 2rem;
+    font-size: 1.4rem;
     color: #ff4d6d;
-    margin-bottom: 12px;
-    text-shadow: 0 0 25px rgba(255, 77, 109, 0.9);
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px rgba(255, 77, 109, 0.9);
     font-weight: 300;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
 #historia-texto {
-    font-size: 1rem;
+    font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.9);
-    line-height: 1.7;
+    line-height: 1.6;
     font-style: italic;
-    letter-spacing: 0.5px;
 }
 
-/* Pantalla de bienvenida */
+/* ============ INTRO ============ */
 #intro {
     position: fixed;
     top: 0; left: 0;
@@ -145,6 +192,7 @@ html, body {
     justify-content: center;
     align-items: center;
     transition: opacity 1s ease, visibility 1s;
+    padding: 20px;
 }
 
 #intro.oculto {
@@ -154,9 +202,10 @@ html, body {
 
 .intro-panel {
     text-align: center;
-    padding: 50px;
-    max-width: 550px;
-    background: rgba(20, 5, 30, 0.8);
+    padding: 40px 25px;
+    max-width: 500px;
+    width: 100%;
+    background: rgba(20, 5, 30, 0.85);
     border: 2px solid #ff4d6d;
     border-radius: 25px;
     box-shadow: 0 0 60px rgba(255, 77, 109, 0.5);
@@ -164,8 +213,7 @@ html, body {
 }
 
 .intro-panel h1 {
-    font-family: 'Great Vibes', cursive;
-    font-size: 3.5rem;
+    font-size: 2.5rem;
     color: #ff4d6d;
     margin-bottom: 20px;
     text-shadow: 0 0 30px rgba(255, 77, 109, 0.8);
@@ -173,9 +221,9 @@ html, body {
 
 .intro-panel p {
     color: rgba(255, 255, 255, 0.85);
-    font-size: 1.05rem;
-    line-height: 1.7;
-    margin-bottom: 12px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 10px;
 }
 
 #btn-empezar {
@@ -183,8 +231,8 @@ html, body {
     background: transparent;
     border: 2px solid #ffd700;
     color: #ffd700;
-    padding: 15px 45px;
-    font-size: 1.1rem;
+    padding: 15px 40px;
+    font-size: 1rem;
     font-family: Arial, sans-serif;
     letter-spacing: 3px;
     border-radius: 50px;
@@ -192,26 +240,27 @@ html, body {
     transition: all 0.4s ease;
     text-transform: uppercase;
     font-weight: bold;
+    touch-action: manipulation;
 }
 
-#btn-empezar:hover {
+#btn-empezar:active {
     background: #ffd700;
     color: black;
-    box-shadow: 0 0 50px #ffd700;
-    transform: scale(1.05);
+    box-shadow: 0 0 40px #ffd700;
+    transform: scale(0.98);
 }
 
-/* Código del desafío final */
+/* ============ CÓDIGO FINAL ============ */
 #codigo {
     position: fixed;
-    top: 100px;
+    top: 130px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.95);
     border: 2px solid #ffd700;
-    border-radius: 20px;
-    padding: 20px 35px;
+    border-radius: 15px;
+    padding: 15px 25px;
     backdrop-filter: blur(15px);
     text-align: center;
     box-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
@@ -222,26 +271,66 @@ html, body {
 
 #codigo p {
     color: #ffd700;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     letter-spacing: 3px;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     font-weight: bold;
 }
 
 #codigo-colores {
     display: flex;
-    gap: 18px;
+    gap: 12px;
     justify-content: center;
 }
 
 .color-codigo {
-    width: 45px;
-    height: 45px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     animation: pulso 1s infinite alternate;
 }
 
 @keyframes pulso {
     from { transform: scale(1); }
-    to { transform: scale(1.15); }
+    to { transform: scale(1.12); }
+}
+
+/* ============ TOAST ============ */
+#toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 300;
+    background: rgba(255, 77, 109, 0.95);
+    color: white;
+    padding: 12px 25px;
+    border-radius: 30px;
+    font-family: Arial, sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    box-shadow: 0 0 30px rgba(255, 77, 109, 0.8);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    max-width: 90%;
+    text-align: center;
+}
+
+#toast.oculto {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+}
+
+/* ============ MEDIA QUERIES MÓVIL ============ */
+@media (max-width: 600px) {
+    #hud { min-width: auto; max-width: 96%; padding: 8px 15px; }
+    #hud-texto { font-size: 0.8rem; }
+    #hud-icono { font-size: 1.4rem; }
+    #hud-nivel { font-size: 0.65rem; }
+    #historia-titulo { font-size: 1.2rem; }
+    #historia-texto { font-size: 0.8rem; }
+    .intro-panel h1 { font-size: 2rem; }
+    #codigo { top: 150px; padding: 12px 18px; }
+    .color-codigo { width: 32px; height: 32px; }
+    #codigo-colores { gap: 10px; }
 }

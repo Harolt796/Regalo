@@ -6,17 +6,10 @@
     <title>Para Ti ❤️</title>
     <link rel="stylesheet" href="style.css">
     
-    <!-- Three.js motor 3D -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    
-    <!-- Controlador de cámara orbital -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    
-    <!-- Cargador de fuentes 3D -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
-    
-    <!-- Post-procesamiento para el efecto Bloom (brillo real) -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -26,13 +19,11 @@
 </head>
 <body>
 
-    <!-- Contenedor del mundo 3D -->
     <div id="canvas-container"></div>
 
-    <!-- Pantalla de carga -->
-    <div id="loader">
-        <div class="spinner"></div>
-        <p>Cargando el universo...</p>
+    <!-- Texto de instrucción que aparece al final -->
+    <div id="instruccion">
+        <p>Gira con el ratón para explorar ✨</p>
     </div>
 
     <script src="script.js"></script>

@@ -125,10 +125,10 @@ function init() {
     renderer.domElement.style.touchAction = 'none';
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // Render target con alpha
+    // ⭐ Render target con alpha Y multiplicado por DPR (nitidez real)
     const renderTarget = new THREE.WebGLRenderTarget(
-        window.innerWidth,
-        window.innerHeight,
+        window.innerWidth * DPR,
+        window.innerHeight * DPR,
         {
             minFilter: THREE.LinearFilter,
             magFilter: THREE.LinearFilter,
@@ -139,7 +139,7 @@ function init() {
 
     const renderScene = new THREE.RenderPass(scene, camera);
     bloomPass = new THREE.UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        new THREE.Vector2(window.innerWidth * DPR, window.innerHeight * DPR),
         CONFIG.bloomIntensidad, 0.6, 0.95
     );
 
@@ -495,8 +495,11 @@ function mostrarFoto(indice) {
     loader.load(
         urlFoto,
         (tex) => {
+            // ⭐ Textura en máxima nitidez
             tex.minFilter = THREE.LinearFilter;
             tex.magFilter = THREE.LinearFilter;
+            tex.generateMipmaps = false;
+            tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
             fotoMat.map = tex;
             fotoMat.color.set(0xffffff);
             fotoMat.needsUpdate = true;
@@ -505,6 +508,10 @@ function mostrarFoto(indice) {
         () => {
             const urlAlt = urlFoto.replace(/%20/g, '-');
             loader.load(urlAlt, (tex) => {
+                tex.minFilter = THREE.LinearFilter;
+                tex.magFilter = THREE.LinearFilter;
+                tex.generateMipmaps = false;
+                tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
                 fotoMat.map = tex;
                 fotoMat.color.set(0xffffff);
                 fotoMat.needsUpdate = true;
@@ -1288,9 +1295,13 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    if (composer.renderTarget1) composer.renderTarget1.setSize(window.innerWidth, window.innerHeight);
-    if (composer.renderTarget2) composer.renderTarget2.setSize(window.innerWidth, window.innerHeight);
+
+    // ⭐ Ahora con DPR para que no se pixele al redimensionar
+    composer.setSize(window.innerWidth * DPR, window.innerHeight * DPR);
+    bloomPass.setSize(window.innerWidth * DPR, window.innerHeight * DPR);
+
+    if (composer.renderTarget1) composer.renderTarget1.setSize(window.innerWidth * DPR, window.innerHeight * DPR);
+    if (composer.renderTarget2) composer.renderTarget2.setSize(window.innerWidth * DPR, window.innerHeight * DPR);
 }
 
 // ============================================

@@ -913,14 +913,16 @@ function revelarFotoFinal() {
     esferasFinales = [];
     document.getElementById('hud-texto').textContent = '✓ ¡COMPLETADO! ❤️';
     document.getElementById('hud-contador').textContent = '5 / 5';
+    
     setTimeout(() => {
         if (fotoActual) scene.remove(fotoActual);
         mostrarFoto(4);
         
-        // *** Después de mostrar la foto 5, iniciar la cinemática del corazón ***
+        // La cinemática del corazón aparece 8 segundos después
         setTimeout(() => {
             iniciarCinematicaCorazon();
-        }, 6000);
+        }, 8000);
+        
     }, 700);
 }
 
@@ -1320,12 +1322,16 @@ function animar() {
         if (p >= 1 && !fotoActual.userData.textoEscrito) {
             fotoActual.userData.textoEscrito = true;
             escribirTexto(indiceFoto);
-            setTimeout(() => {
-                if (estado === 'mostrandoFoto') {
-                    estado = 'desafio';
-                    lanzarDesafio(indiceFoto);
-                }
-            }, 2500);
+            
+            // ⚠️ SOLO lanzar desafío si NO es la foto final
+            if (indiceFoto < 4) {
+                setTimeout(() => {
+                    if (estado === 'mostrandoFoto') {
+                        estado = 'desafio';
+                        lanzarDesafio(indiceFoto);
+                    }
+                }, 2500);
+            }
         }
     }
 

@@ -11,14 +11,14 @@
     width: auto;
     height: auto;
     z-index: 0;
-    opacity: 0.30;
+    opacity: 0.45;                              /* 👈 subido de 0.30 */
     pointer-events: none;
     object-fit: cover;
-    filter: blur(1.5px) brightness(0.55);
+    filter: blur(1.5px) brightness(0.85);       /* 👈 brightness subido de 0.55 */
 }
 
 html, body {
-    background: transparent; /* ⭐ CAMBIO: Antes era #000 — ahora transparente para que el GIF se vea */
+    background: transparent;
     overflow: hidden;
     height: 100vh;
     height: 100dvh;
@@ -39,6 +39,8 @@ html, body {
     inset: 0;
     z-index: 1;
     touch-action: none;
+    /* 🅱️ PLAN B: si el alphaPass del JS no deja ver el GIF, descomenta esta línea */
+    /* mix-blend-mode: screen; */
 }
 
 /* ============ HUD ============ */

@@ -18,7 +18,7 @@
 }
 
 html, body {
-    background: #000;
+    background: transparent; /* ⭐ CAMBIO: Antes era #000 — ahora transparente para que el GIF se vea */
     overflow: hidden;
     height: 100vh;
     height: 100dvh;

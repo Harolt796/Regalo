@@ -11,7 +11,7 @@
     width: auto;
     height: auto;
     z-index: 0;
-    opacity: 0.45;                              /* 👈 subido de 0.30 */
+    opacity: 0.30;                              /* 👈 subido de 0.30 */
     pointer-events: none;
     object-fit: cover;
     filter: blur(1.5px) brightness(0.85);       /* 👈 brightness subido de 0.55 */

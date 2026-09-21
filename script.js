@@ -12,7 +12,6 @@ let pointerNDC = new THREE.Vector2();
 let cameraShake = 0;
 let bursts = [];
 let ultimoTiempo = 0;
-let fpsContador = 0, fpsTiempoAcum = 0;
 
 // Estado del juego
 let estado = 'intro';
@@ -75,16 +74,6 @@ const DESAFIOS = [
     { tipo: 'final', total: 0, icono: '👑', texto: 'Desafío Final', timer: 0, mov: 'final' }
 ];
 
-// ============================================
-// DEBUG
-// ============================================
-function updateDebug() {
-    const el = document.getElementById('dbg-estado');
-    if (el) el.textContent = estado;
-    const el2 = document.getElementById('dbg-objs');
-    if (el2) el2.textContent = objetivos.filter(o => !o.userData.eliminado).length;
-}
-
 function posicionSegura(indice, total) {
     if (total === 1) return { x: 0, y: 0 };
     const patrones = {
@@ -125,7 +114,6 @@ function init() {
     renderer.domElement.style.touchAction = 'none';
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // ⭐ Render target con alpha Y multiplicado por DPR (nitidez real)
     const renderTarget = new THREE.WebGLRenderTarget(
         window.innerWidth * DPR,
         window.innerHeight * DPR,
@@ -146,7 +134,6 @@ function init() {
     composer = new THREE.EffectComposer(renderer, renderTarget);
     composer.addPass(renderScene);
     composer.addPass(bloomPass);
-    // (el alpha final lo maneja mix-blend-mode: screen del CSS)
 
     configurarLuces();
     crearEstrellas();
@@ -639,7 +626,6 @@ function iniciarTimer(segundos) {
                 } else if (indiceFoto === 4 && faseFinal === 0) {
                     setTimeout(() => iniciarDesafioFinal(), 900);
                 } else if (faseFinal === 3) {
-                    // ⭐ Tiempo agotado en fase 3 → volver a memorizar (con nuevo código)
                     setTimeout(() => iniciarFaseMemorizar(), 900);
                 } else {
                     setTimeout(() => lanzarDesafio(indiceFoto), 900);
@@ -823,21 +809,17 @@ function iniciarDesafioFinal() {
     }
 }
 
-// ⭐ FASE 2: MEMORIZAR — ahora limpia todo y usa 4 segundos
 function iniciarFaseMemorizar() {
     faseFinal = 2;
     document.getElementById('hud-texto').textContent = 'FASE 2: Memoriza el orden';
     document.getElementById('hud-contador').textContent = '👀';
     
-    // Detener cualquier timer activo (por si venimos de un fallo)
     detenerTimer();
     
-    // Limpiar esferas del intento anterior
     esferasFinales.forEach(e => { if (e.parent) scene.remove(e); });
     esferasFinales = [];
     secuenciaUsuario = [];
     
-    // Generar NUEVO código de colores (cada intento es diferente)
     const colores = [
         { color: 0xff4d6d }, { color: 0xffd700 },
         { color: 0x4d79ff }, { color: 0x66ffaa }
@@ -863,18 +845,15 @@ function iniciarFaseMemorizar() {
     });
     document.getElementById('codigo').classList.remove('oculto');
     
-    // ⭐ 4 segundos para memorizar
     setTimeout(() => {
         document.getElementById('codigo').classList.add('oculto');
         iniciarFaseSecuencia();
     }, 4000);
 }
 
-// ⭐ FASE 3: SECUENCIA — limpia esferas previas para que no se acumulen
 function iniciarFaseSecuencia() {
     faseFinal = 3;
     
-    // Limpiar esferas previas (evita acumulación)
     esferasFinales.forEach(e => { if (e.parent) scene.remove(e); });
     esferasFinales = [];
     secuenciaUsuario = [];
@@ -919,7 +898,6 @@ function iniciarFaseSecuencia() {
     });
 }
 
-// ⭐ CLICK ESFERA FINAL — si fallas, vuelve a memorizar (con nuevo código)
 function onEsferaFinalClick(esfera) {
     if (esfera.userData.eliminado) return;
     
@@ -928,13 +906,11 @@ function onEsferaFinalClick(esfera) {
     const colorElegido = esfera.userData.colorId;
     
     if (colorElegido !== colorEsperado) {
-        // Fallo: reiniciar TODO desde la fase de memorizar
         cameraShake = 1;
         bloomPass.strength = 2.5;
         setTimeout(() => bloomPass.strength = CONFIG.bloomIntensidad, 350);
         mostrarToast('❌ Orden incorrecto. ¡Mira de nuevo!');
         
-        // Volver a mostrar los colores → nueva oportunidad
         setTimeout(() => {
             iniciarFaseMemorizar();
         }, 900);
@@ -988,7 +964,6 @@ function revelarFotoFinal() {
 // 🎯 DESAFÍO ÉPICO (después de la foto 5)
 // ============================================
 function iniciarDesafioEpico() {
-    console.log('>>> Iniciando desafío épico');
     desafioEpicoActivo = true;
     objetivos = [];
     objetivosTotales = 10;
@@ -1037,7 +1012,6 @@ function iniciarDesafioEpico() {
 // 💖 CINEMÁTICA FINAL DEL CORAZÓN 💖
 // ============================================
 function iniciarCinematicaCorazon() {
-    console.log('>>> Iniciando cinemática del corazón');
     heartStarted = true;
     estado = 'corazon';
     corazonInicio = reloj.getElapsedTime();
@@ -1306,8 +1280,6 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-
-    // El EffectComposer YA multiplica por DPR internamente.
     composer.setSize(window.innerWidth, window.innerHeight);
 }
 
@@ -1330,16 +1302,6 @@ function animar() {
     const delta = Math.min(tiempoActual - ultimoTiempo, 0.08);
     ultimoTiempo = tiempoActual;
     const tiempo = tiempoActual;
-
-    fpsContador++;
-    fpsTiempoAcum += delta;
-    if (fpsTiempoAcum >= 0.5) {
-        const dbgFps = document.getElementById('dbg-fps');
-        if (dbgFps) dbgFps.textContent = Math.round(fpsContador / fpsTiempoAcum);
-        fpsContador = 0;
-        fpsTiempoAcum = 0;
-        updateDebug();
-    }
 
     if (estrellas) estrellas.rotation.y += 0.00008;
 

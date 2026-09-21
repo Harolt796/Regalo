@@ -1,5 +1,5 @@
 // ============================================
-// REGALO 3D - VERSIÓN CORREGIDA Y JUGABLE
+// REGALO 3D - VERSIÓN FINAL CON CINEMÁTICA DE CORAZÓN
 // ============================================
 
 let scene, camera, renderer, composer, bloomPass;
@@ -28,6 +28,15 @@ let faseFinal = 0;
 let codigoColores = [];
 let secuenciaUsuario = [];
 let esferasFinales = [];
+
+// === CINEMÁTICA FINAL DEL CORAZÓN ===
+let corazonParticulas = null;
+let corazonPosicionesFinales = null;
+let corazonFormado = false;
+let corazonProgreso = 0;
+let corazonInicio = 0;
+let corazonMensajeMostrado = false;
+let heartStarted = false;
 
 const ES_MOVIL = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 const DPR = Math.min(window.devicePixelRatio || 1, 1.8);
@@ -66,7 +75,7 @@ const DESAFIOS = [
 ];
 
 // ============================================
-// FUNCIONES AUXILIARES DE DEBUG
+// DEBUG
 // ============================================
 function updateDebug() {
     const el = document.getElementById('dbg-estado');
@@ -75,49 +84,20 @@ function updateDebug() {
     if (el2) el2.textContent = objetivos.filter(o => !o.userData.eliminado).length;
 }
 
-// Calcula posición segura según la pantalla
-// Retorna coords dentro del campo visible
 function posicionSegura(indice, total) {
-    // Área segura: X de -14 a 14, Y de -16 a 16 (funciona en móvil)
     if (total === 1) return { x: 0, y: 0 };
-    
     const patrones = {
-        3: [
-            { x: -13, y: 8 },
-            { x: 13, y: 8 },
-            { x: 0, y: -12 }
-        ],
-        5: [
-            { x: -14, y: 10 },
-            { x: 14, y: 10 },
-            { x: -10, y: -10 },
-            { x: 10, y: -10 },
-            { x: 0, y: 15 }
-        ],
-        7: [
-            { x: -14, y: 12 },
-            { x: 0, y: 14 },
-            { x: 14, y: 12 },
-            { x: -14, y: -4 },
-            { x: 14, y: -4 },
-            { x: -8, y: -13 },
-            { x: 8, y: -13 }
-        ],
-        4: [
-            { x: -12, y: 8 },
-            { x: -5, y: 14 },
-            { x: 5, y: 8 },
-            { x: 12, y: 14 }
-        ]
+        3: [{ x: -13, y: 8 }, { x: 13, y: 8 }, { x: 0, y: -12 }],
+        5: [{ x: -14, y: 10 }, { x: 14, y: 10 }, { x: -10, y: -10 }, { x: 10, y: -10 }, { x: 0, y: 15 }],
+        7: [{ x: -14, y: 12 }, { x: 0, y: 14 }, { x: 14, y: 12 }, { x: -14, y: -4 }, { x: 14, y: -4 }, { x: -8, y: -13 }, { x: 8, y: -13 }],
+        4: [{ x: -12, y: 8 }, { x: -5, y: 14 }, { x: 5, y: 8 }, { x: 12, y: 14 }]
     };
-    
     const patron = patrones[total] || patrones[3];
-    const p = patron[indice % patron.length];
-    return p;
+    return patron[indice % patron.length];
 }
 
 // ============================================
-// INICIALIZACIÓN
+// INIT
 // ============================================
 function init() {
     reloj = new THREE.Clock();
@@ -429,7 +409,6 @@ function crearPolvoDorado() {
 // ============================================
 function empezar(e) {
     e.preventDefault();
-    console.log('>>> Iniciando juego');
     document.getElementById('intro').classList.add('oculto');
     document.getElementById('progreso').classList.add('visible');
     document.getElementById('hud').classList.add('visible');
@@ -441,7 +420,6 @@ function empezar(e) {
 // FOTO
 // ============================================
 function mostrarFoto(indice) {
-    console.log('>>> Mostrando foto', indice);
     indiceFoto = indice;
     actualizarProgreso();
     estado = 'mostrandoFoto';
@@ -455,7 +433,6 @@ function mostrarFoto(indice) {
 
     const grupo = new THREE.Group();
 
-    // Marco dorado
     const marcoGeo = new THREE.BoxGeometry(25, 33, 0.5);
     const marcoMat = new THREE.MeshStandardMaterial({
         color: 0xcc9900,
@@ -466,7 +443,6 @@ function mostrarFoto(indice) {
     });
     grupo.add(new THREE.Mesh(marcoGeo, marcoMat));
 
-    // Esquinas decorativas
     for (let i = 0; i < 4; i++) {
         const esqGeo = new THREE.SphereGeometry(0.6, 8, 8);
         const esqMat = new THREE.MeshStandardMaterial({
@@ -480,7 +456,6 @@ function mostrarFoto(indice) {
         grupo.add(esq);
     }
 
-    // Foto
     const fotoGeo = new THREE.PlaneGeometry(23, 31);
     const fotoMat = new THREE.MeshBasicMaterial({
         color: 0x222222,
@@ -492,12 +467,10 @@ function mostrarFoto(indice) {
 
     const loader = new THREE.TextureLoader();
     const urlFoto = encodeURI(FOTOS[indice]);
-    console.log('>>> Cargando:', urlFoto);
     
     loader.load(
         urlFoto,
         (tex) => {
-            console.log('>>> Foto OK');
             tex.minFilter = THREE.LinearFilter;
             tex.magFilter = THREE.LinearFilter;
             fotoMat.map = tex;
@@ -505,8 +478,7 @@ function mostrarFoto(indice) {
             fotoMat.needsUpdate = true;
         },
         undefined,
-        (err) => {
-            console.log('>>> Error foto, probando alt:', err);
+        () => {
             const urlAlt = urlFoto.replace(/%20/g, '-');
             loader.load(urlAlt, (tex) => {
                 fotoMat.map = tex;
@@ -519,10 +491,7 @@ function mostrarFoto(indice) {
     grupo.position.set(0, 0, 0);
     grupo.rotation.set(0, Math.PI * 2, 0);
     grupo.scale.set(0.1, 0.1, 0.1);
-    grupo.userData = { 
-        tiempoInicio: reloj.getElapsedTime(), 
-        textoEscrito: false 
-    };
+    grupo.userData = { tiempoInicio: reloj.getElapsedTime(), textoEscrito: false };
     
     fotoActual = grupo;
     scene.add(grupo);
@@ -569,7 +538,6 @@ function actualizarProgreso() {
 }
 
 function lanzarDesafio(indice) {
-    console.log('>>> Lanzando desafío', indice);
     objetivos = [];
     const desafio = DESAFIOS[indice];
     
@@ -605,15 +573,10 @@ function lanzarDesafio(indice) {
             obj.userData.visible = true;
             obj.userData.proximoCambio = Math.random() * 3;
         }
-        if (desafio.mov === 'flotante') {
-            obj.userData.velX = (Math.random() - 0.5) * 2;
-            obj.userData.velY = (Math.random() - 0.5) * 2;
-        }
         
         scene.add(obj);
         objetivos.push(obj);
     }
-    console.log('>>> Objetivos creados:', objetivos.length);
 }
 
 function actualizarContador() {
@@ -750,7 +713,6 @@ function crearObjetivo(tipo, indice) {
 
 function onObjetivoClick(obj) {
     if (obj.userData.eliminado) return;
-    console.log('>>> Objetivo clickeado');
     obj.userData.eliminado = true;
     objetivosRestantes--;
     actualizarContador();
@@ -954,7 +916,143 @@ function revelarFotoFinal() {
     setTimeout(() => {
         if (fotoActual) scene.remove(fotoActual);
         mostrarFoto(4);
+        
+        // *** Después de mostrar la foto 5, iniciar la cinemática del corazón ***
+        setTimeout(() => {
+            iniciarCinematicaCorazon();
+        }, 6000); // 6 segundos para ver la foto 5
     }, 700);
+}
+
+// ============================================
+// 💖 CINEMÁTICA FINAL DEL CORAZÓN 💖
+// ============================================
+function iniciarCinematicaCorazon() {
+    console.log('>>> Iniciando cinemática del corazón');
+    heartStarted = true;
+    estado = 'corazon';
+    corazonInicio = reloj.getElapsedTime();
+    corazonProgreso = 0;
+    corazonFormado = false;
+    corazonMensajeMostrado = false;
+    
+    // Ocultar HUD, progreso, historia
+    document.getElementById('hud').classList.remove('visible');
+    document.getElementById('progreso').classList.remove('visible');
+    document.getElementById('historia').classList.remove('visible');
+    
+    // Fade out de la foto
+    if (fotoActual) {
+        fotoActual.userData.fadeOut = true;
+    }
+    
+    // Crear el corazón de partículas
+    crearCorazonParticulas();
+    
+    // Después de 8 segundos, mostrar el mensaje final
+    setTimeout(() => {
+        mostrarMensajeFinal();
+    }, 8000);
+}
+
+function crearCorazonParticulas() {
+    const total = ES_MOVIL ? 8000 : 15000;
+    const posIni = new Float32Array(total * 3);
+    const posFin = new Float32Array(total * 3);
+    const colores = new Float32Array(total * 3);
+    
+    const colorRosa = new THREE.Color(0xff4d6d);
+    const colorBlanco = new THREE.Color(0xffffff);
+    const colorDorado = new THREE.Color(0xffd700);
+    
+    for (let i = 0; i < total; i++) {
+        // --- POSICIÓN FINAL (forma de corazón) ---
+        const t = Math.random() * Math.PI * 2;
+        const grosor = 1 + (Math.random() - 0.5) * 0.55;
+        const x2d = 16 * Math.pow(Math.sin(t), 3);
+        const y2d = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+        const z = (Math.random() - 0.5) * 6 * grosor;
+        const radio = 0.85 + Math.random() * 0.2;
+        const factor = 1.6;
+        
+        posFin[i * 3] = x2d * factor * radio;
+        posFin[i * 3 + 1] = y2d * factor * radio;
+        posFin[i * 3 + 2] = z;
+        
+        // --- POSICIÓN INICIAL (dispersa por el universo) ---
+        const distancia = 200 + Math.random() * 500;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        posIni[i * 3] = distancia * Math.sin(phi) * Math.cos(theta);
+        posIni[i * 3 + 1] = distancia * Math.cos(phi);
+        posIni[i * 3 + 2] = distancia * Math.sin(phi) * Math.sin(theta);
+        
+        // --- COLORES (mezcla rosa, blanco y dorado) ---
+        let mixColor;
+        const r = Math.random();
+        if (r < 0.5) mixColor = colorRosa.clone().lerp(colorBlanco, Math.random() * 0.6);
+        else if (r < 0.85) mixColor = colorRosa.clone();
+        else mixColor = colorDorado.clone();
+        
+        colores[i * 3] = mixColor.r;
+        colores[i * 3 + 1] = mixColor.g;
+        colores[i * 3 + 2] = mixColor.b;
+    }
+    
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(posIni, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colores, 3));
+    
+    // Textura circular para las partículas
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.4, 'rgba(255,255,255,0.5)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    
+    const mat = new THREE.PointsMaterial({
+        size: ES_MOVIL ? 1.2 : 1.5,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        map: new THREE.CanvasTexture(canvas),
+        toneMapped: false
+    });
+    
+    corazonParticulas = new THREE.Points(geometry, mat);
+    corazonParticulas.userData.original = new Float32Array(posIni);
+    corazonPosicionesFinales = posFin;
+    scene.add(corazonParticulas);
+}
+
+function mostrarMensajeFinal() {
+    if (corazonMensajeMostrado) return;
+    corazonMensajeMostrado = true;
+    
+    // Crear el mensaje HTML sobre el corazón
+    const mensaje = document.createElement('div');
+    mensaje.id = 'mensaje-final';
+    mensaje.innerHTML = `
+        <h1>Te Amo</h1>
+        <div class="flores-deco">🌻 ✨ 🌻</div>
+        <p class="mensaje-texto">Gracias por ser la persona más especial<br>en mi universo entero.</p>
+        <p class="firma">Feliz Día del Amor y la Amistad ❤️</p>
+    `;
+    document.body.appendChild(mensaje);
+    
+    // Animar la entrada
+    setTimeout(() => mensaje.classList.add('visible'), 100);
+}
+
+function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 // ============================================
@@ -1053,7 +1151,7 @@ function onPointerMove(e) {
     pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
     pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
     
-    if (estado === 'intro' || estado === 'cargando') return;
+    if (estado === 'intro' || estado === 'cargando' || estado === 'corazon') return;
     
     raycaster.setFromCamera(pointerNDC, camera);
     
@@ -1073,6 +1171,8 @@ function onPointerMove(e) {
 
 function onPointerDown(e) {
     e.preventDefault();
+    
+    if (estado === 'corazon') return;
     
     pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
     pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -1130,7 +1230,6 @@ function animar() {
     ultimoTiempo = tiempoActual;
     const tiempo = tiempoActual;
 
-    // Debug FPS
     fpsContador++;
     fpsTiempoAcum += delta;
     if (fpsTiempoAcum >= 0.5) {
@@ -1247,6 +1346,46 @@ function animar() {
         }
     }
 
+    // Fade out de la foto al pasar a la cinemática del corazón
+    if (fotoActual && fotoActual.userData.fadeOut) {
+        const f = Math.min(1, corazonProgreso);
+        fotoActual.material.opacity = 1 - f;
+        const s = Math.max(0, 1 - f);
+        fotoActual.scale.set(s, s, s);
+    }
+
+    // === 💖 CINEMÁTICA DEL CORAZÓN ===
+    if (heartStarted && corazonParticulas) {
+        corazonProgreso = Math.min((tiempo - corazonInicio) / 6, 1);
+        const factor = easeInOutCubic(corazonProgreso);
+        
+        const posiciones = corazonParticulas.geometry.attributes.position.array;
+        const original = corazonParticulas.userData.original;
+        
+        for (let i = 0; i < posiciones.length; i++) {
+            posiciones[i] = original[i] + (corazonPosicionesFinales[i] - original[i]) * factor;
+        }
+        corazonParticulas.geometry.attributes.position.needsUpdate = true;
+        
+        if (corazonProgreso >= 1 && !corazonFormado) {
+            corazonFormado = true;
+        }
+        
+        // Latido con bloom
+        if (corazonFormado) {
+            const t = (tiempo - corazonInicio) * 1.6;
+            const beat = Math.pow(Math.sin(t), 8) + 0.7 * Math.pow(Math.sin(t - 0.15), 8);
+            const escala = 1 + beat * 0.05;
+            corazonParticulas.scale.set(escala, escala, escala);
+            
+            // El bloom late con el corazón
+            bloomPass.strength = CONFIG.bloomIntensidad + beat * 0.9;
+            
+            // Rotación sutil
+            corazonParticulas.rotation.y = Math.sin(tiempo * 0.3) * 0.12;
+        }
+    }
+
     // === OBJETIVOS ===
     objetivos.forEach((obj, i) => {
         if (!obj.userData.eliminado) {
@@ -1340,7 +1479,6 @@ function animar() {
     }
 
     // === CÁMARA ===
-    // Movimiento suave base + shake (NO acumulativo)
     const swayX = Math.sin(tiempo * 0.15) * 2;
     const swayY = Math.cos(tiempo * 0.1) * 1.5;
     
@@ -1353,9 +1491,16 @@ function animar() {
         cameraShake = 0;
     }
     
+    // Alejar cámara cuando se forma el corazón
+    let zCam = CONFIG.cameraZ;
+    if (heartStarted) {
+        const p = Math.min(corazonProgreso, 1);
+        zCam = CONFIG.cameraZ + p * 40; // Se aleja a 130
+    }
+    
     camera.position.x = swayX + shakeX;
     camera.position.y = swayY + shakeY;
-    camera.position.z = CONFIG.cameraZ;
+    camera.position.z = zCam;
     camera.lookAt(0, 0, 0);
 
     composer.render();

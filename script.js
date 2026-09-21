@@ -729,7 +729,13 @@ function onObjetivoClick(obj) {
         setTimeout(() => {
             objetivos.forEach(o => { if (o.parent) scene.remove(o); });
             objetivos = [];
-            if (indiceFoto < 4) {
+            
+            // ⚠️ FIX: Si estamos en el desafío final FASE 1, avanzar a FASE 2 (memorizar)
+            if (indiceFoto === 4 && faseFinal === 1) {
+                iniciarFaseMemorizar();
+            }
+            // Si NO es la última foto, avanzar a la siguiente foto normal
+            else if (indiceFoto < 4) {
                 if (fotoActual) scene.remove(fotoActual);
                 fotoActual = null;
                 document.getElementById('historia').classList.remove('visible');
@@ -785,7 +791,7 @@ function iniciarFaseMemorizar() {
     codigoColores = [];
     const copia = [...colores];
     for (let i = 0; i < 4; i++) {
-        const idx = Math.floor(Math.random() * copia.length);
+            const idx = Math.floor(Math.random() * copia.length);
         codigoColores.push(copia[idx]);
         copia.splice(idx, 1);
     }

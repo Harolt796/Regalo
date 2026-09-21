@@ -119,17 +119,30 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(DPR);
     renderer.setClearColor(0x000000, 0);
+    renderer.setClearAlpha(0); // ⭐ Transparente
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     renderer.domElement.style.touchAction = 'none';
     document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    // ⭐ RENDER TARGET CON ALPHA (clave para que el GIF se vea a través)
+    const renderTarget = new THREE.WebGLRenderTarget(
+        window.innerWidth,
+        window.innerHeight,
+        {
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+            format: THREE.RGBAFormat,
+            type: THREE.HalfFloatType
+        }
+    );
 
     const renderScene = new THREE.RenderPass(scene, camera);
     bloomPass = new THREE.UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
         CONFIG.bloomIntensidad, 0.6, 0.95
     );
-    composer = new THREE.EffectComposer(renderer);
+    composer = new THREE.EffectComposer(renderer, renderTarget);
     composer.addPass(renderScene);
     composer.addPass(bloomPass);
 
@@ -415,7 +428,6 @@ function empezar(e) {
     document.getElementById('progreso').classList.add('visible');
     document.getElementById('hud').classList.add('visible');
     
-    // ⭐ Iniciar la música de fondo
     const musica = document.getElementById('musica-fondo');
     if (musica) {
         musica.volume = 0.4;
@@ -1275,6 +1287,9 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
+    // ⭐ Actualizar render targets con alpha
+    if (composer.renderTarget1) composer.renderTarget1.setSize(window.innerWidth, window.innerHeight);
+    if (composer.renderTarget2) composer.renderTarget2.setSize(window.innerWidth, window.innerHeight);
 }
 
 // ============================================
@@ -1407,7 +1422,6 @@ function animar() {
         }
     }
 
-    // Fade out de la foto al pasar a la cinemática del corazón
     if (fotoActual && fotoActual.userData.fadeOut) {
         const f = Math.min(1, corazonProgreso);
         fotoActual.children.forEach(child => {
@@ -1420,7 +1434,7 @@ function animar() {
         fotoActual.scale.set(s, s, s);
     }
 
-    // === 💖 CINEMÁTICA DEL CORAZÓN ===
+    // === CINEMÁTICA DEL CORAZÓN ===
     if (heartStarted && corazonParticulas) {
         corazonProgreso = Math.min((tiempo - corazonInicio) / 6, 1);
         const factor = easeInOutCubic(corazonProgreso);

@@ -639,7 +639,8 @@ function iniciarTimer(segundos) {
                 } else if (indiceFoto === 4 && faseFinal === 0) {
                     setTimeout(() => iniciarDesafioFinal(), 900);
                 } else if (faseFinal === 3) {
-                    setTimeout(() => iniciarFaseSecuencia(), 900);
+                    // ⭐ Tiempo agotado en fase 3 → volver a memorizar (con nuevo código)
+                    setTimeout(() => iniciarFaseMemorizar(), 900);
                 } else {
                     setTimeout(() => lanzarDesafio(indiceFoto), 900);
                 }
@@ -822,11 +823,21 @@ function iniciarDesafioFinal() {
     }
 }
 
+// ⭐ FASE 2: MEMORIZAR — ahora limpia todo y usa 4 segundos
 function iniciarFaseMemorizar() {
     faseFinal = 2;
     document.getElementById('hud-texto').textContent = 'FASE 2: Memoriza el orden';
     document.getElementById('hud-contador').textContent = '👀';
     
+    // Detener cualquier timer activo (por si venimos de un fallo)
+    detenerTimer();
+    
+    // Limpiar esferas del intento anterior
+    esferasFinales.forEach(e => { if (e.parent) scene.remove(e); });
+    esferasFinales = [];
+    secuenciaUsuario = [];
+    
+    // Generar NUEVO código de colores (cada intento es diferente)
     const colores = [
         { color: 0xff4d6d }, { color: 0xffd700 },
         { color: 0x4d79ff }, { color: 0x66ffaa }
@@ -852,16 +863,21 @@ function iniciarFaseMemorizar() {
     });
     document.getElementById('codigo').classList.remove('oculto');
     
+    // ⭐ 4 segundos para memorizar
     setTimeout(() => {
         document.getElementById('codigo').classList.add('oculto');
         iniciarFaseSecuencia();
-    }, 5000);
+    }, 4000);
 }
 
+// ⭐ FASE 3: SECUENCIA — limpia esferas previas para que no se acumulen
 function iniciarFaseSecuencia() {
     faseFinal = 3;
-    secuenciaUsuario = [];
+    
+    // Limpiar esferas previas (evita acumulación)
+    esferasFinales.forEach(e => { if (e.parent) scene.remove(e); });
     esferasFinales = [];
+    secuenciaUsuario = [];
     
     document.getElementById('hud-texto').textContent = 'FASE 3: Toca las esferas en orden';
     document.getElementById('hud-contador').textContent = '0 / 4';
@@ -903,6 +919,7 @@ function iniciarFaseSecuencia() {
     });
 }
 
+// ⭐ CLICK ESFERA FINAL — si fallas, vuelve a memorizar (con nuevo código)
 function onEsferaFinalClick(esfera) {
     if (esfera.userData.eliminado) return;
     
@@ -911,21 +928,16 @@ function onEsferaFinalClick(esfera) {
     const colorElegido = esfera.userData.colorId;
     
     if (colorElegido !== colorEsperado) {
-        secuenciaUsuario = [];
+        // Fallo: reiniciar TODO desde la fase de memorizar
         cameraShake = 1;
         bloomPass.strength = 2.5;
         setTimeout(() => bloomPass.strength = CONFIG.bloomIntensidad, 350);
-        mostrarToast('❌ Orden incorrecto');
-        document.getElementById('hud-contador').textContent = '0 / 4';
+        mostrarToast('❌ Orden incorrecto. ¡Mira de nuevo!');
         
-        esferasFinales.forEach(e => {
-            e.userData.eliminado = false;
-            e.userData.escalaBase = 1;
-        });
-        
+        // Volver a mostrar los colores → nueva oportunidad
         setTimeout(() => {
-            document.getElementById('hud-texto').textContent = 'Toca las esferas en orden';
-        }, 1200);
+            iniciarFaseMemorizar();
+        }, 900);
         return;
     }
     
@@ -1295,8 +1307,7 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // ⭐ El EffectComposer YA multiplica por DPR internamente.
-    // Solo le pasamos CSS pixels, él se encarga del resto.
+    // El EffectComposer YA multiplica por DPR internamente.
     composer.setSize(window.innerWidth, window.innerHeight);
 }
 

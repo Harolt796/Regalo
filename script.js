@@ -920,7 +920,7 @@ function revelarFotoFinal() {
         // *** Después de mostrar la foto 5, iniciar la cinemática del corazón ***
         setTimeout(() => {
             iniciarCinematicaCorazon();
-        }, 6000); // 6 segundos para ver la foto 5
+        }, 6000);
     }, 700);
 }
 
@@ -936,20 +936,16 @@ function iniciarCinematicaCorazon() {
     corazonFormado = false;
     corazonMensajeMostrado = false;
     
-    // Ocultar HUD, progreso, historia
     document.getElementById('hud').classList.remove('visible');
     document.getElementById('progreso').classList.remove('visible');
     document.getElementById('historia').classList.remove('visible');
     
-    // Fade out de la foto
     if (fotoActual) {
         fotoActual.userData.fadeOut = true;
     }
     
-    // Crear el corazón de partículas
     crearCorazonParticulas();
     
-    // Después de 8 segundos, mostrar el mensaje final
     setTimeout(() => {
         mostrarMensajeFinal();
     }, 8000);
@@ -966,7 +962,6 @@ function crearCorazonParticulas() {
     const colorDorado = new THREE.Color(0xffd700);
     
     for (let i = 0; i < total; i++) {
-        // --- POSICIÓN FINAL (forma de corazón) ---
         const t = Math.random() * Math.PI * 2;
         const grosor = 1 + (Math.random() - 0.5) * 0.55;
         const x2d = 16 * Math.pow(Math.sin(t), 3);
@@ -979,7 +974,6 @@ function crearCorazonParticulas() {
         posFin[i * 3 + 1] = y2d * factor * radio;
         posFin[i * 3 + 2] = z;
         
-        // --- POSICIÓN INICIAL (dispersa por el universo) ---
         const distancia = 200 + Math.random() * 500;
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
@@ -987,7 +981,6 @@ function crearCorazonParticulas() {
         posIni[i * 3 + 1] = distancia * Math.cos(phi);
         posIni[i * 3 + 2] = distancia * Math.sin(phi) * Math.sin(theta);
         
-        // --- COLORES (mezcla rosa, blanco y dorado) ---
         let mixColor;
         const r = Math.random();
         if (r < 0.5) mixColor = colorRosa.clone().lerp(colorBlanco, Math.random() * 0.6);
@@ -1003,7 +996,6 @@ function crearCorazonParticulas() {
     geometry.setAttribute('position', new THREE.BufferAttribute(posIni, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colores, 3));
     
-    // Textura circular para las partículas
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
@@ -1036,7 +1028,6 @@ function mostrarMensajeFinal() {
     if (corazonMensajeMostrado) return;
     corazonMensajeMostrado = true;
     
-    // Crear el mensaje HTML sobre el corazón
     const mensaje = document.createElement('div');
     mensaje.id = 'mensaje-final';
     mensaje.innerHTML = `
@@ -1047,7 +1038,6 @@ function mostrarMensajeFinal() {
     `;
     document.body.appendChild(mensaje);
     
-    // Animar la entrada
     setTimeout(() => mensaje.classList.add('visible'), 100);
 }
 
@@ -1233,21 +1223,19 @@ function animar() {
     fpsContador++;
     fpsTiempoAcum += delta;
     if (fpsTiempoAcum >= 0.5) {
-        document.getElementById('dbg-fps').textContent = Math.round(fpsContador / fpsTiempoAcum);
+        const dbgFps = document.getElementById('dbg-fps');
+        if (dbgFps) dbgFps.textContent = Math.round(fpsContador / fpsTiempoAcum);
         fpsContador = 0;
         fpsTiempoAcum = 0;
         updateDebug();
     }
 
-    // Estrellas
     if (estrellas) estrellas.rotation.y += 0.00008;
 
-    // Nebulosas
     nebulosas.forEach((n, i) => {
         n.rotation.y += 0.00015 * (i + 1);
     });
 
-    // Auroras
     auroras.forEach((a, idx) => {
         const pos = a.geometry.attributes.position.array;
         const base = a.userData.posicionesBase;
@@ -1259,7 +1247,6 @@ function animar() {
         a.material.opacity = 0.25 + Math.sin(tiempo * 0.5 + idx) * 0.15;
     });
 
-    // Planetas
     planetas.forEach(p => {
         p.children[0].rotation.y += p.userData.rotVel;
         p.userData.orbT += p.userData.orbVel;
@@ -1268,7 +1255,6 @@ function animar() {
         p.position.z = d * Math.sin(p.userData.orbP) * Math.sin(p.userData.orbT);
     });
 
-    // Cristales
     cristalesAmb.forEach(c => {
         const d = c.userData;
         d.theta += d.vel;
@@ -1279,7 +1265,6 @@ function animar() {
         c.rotation.z += d.rot.z;
     });
 
-    // Flores
     floresAmb.forEach((f, i) => {
         const d = f.userData;
         d.theta += d.velocidad;
@@ -1290,14 +1275,12 @@ function animar() {
         f.scale.set(resp, resp, resp);
     });
 
-    // Polvo
     polvoDorado.forEach((p) => {
         const d = p.userData;
         p.position.y = d.basePos.y + Math.sin(tiempo * d.velY + d.offset) * d.amplitud;
         p.position.x = d.basePos.x + Math.cos(tiempo * d.velY * 0.7 + d.offset) * d.amplitud * 0.5;
     });
 
-    // Meteoros
     for (let i = meteoros.length - 1; i >= 0; i--) {
         const m = meteoros[i];
         m.userData.vida += delta;
@@ -1349,7 +1332,12 @@ function animar() {
     // Fade out de la foto al pasar a la cinemática del corazón
     if (fotoActual && fotoActual.userData.fadeOut) {
         const f = Math.min(1, corazonProgreso);
-        fotoActual.material.opacity = 1 - f;
+        fotoActual.children.forEach(child => {
+            if (child.material) {
+                if (!child.material.transparent) child.material.transparent = true;
+                child.material.opacity = 1 - f;
+            }
+        });
         const s = Math.max(0, 1 - f);
         fotoActual.scale.set(s, s, s);
     }
@@ -1371,17 +1359,14 @@ function animar() {
             corazonFormado = true;
         }
         
-        // Latido con bloom
         if (corazonFormado) {
             const t = (tiempo - corazonInicio) * 1.6;
             const beat = Math.pow(Math.sin(t), 8) + 0.7 * Math.pow(Math.sin(t - 0.15), 8);
             const escala = 1 + beat * 0.05;
             corazonParticulas.scale.set(escala, escala, escala);
             
-            // El bloom late con el corazón
             bloomPass.strength = CONFIG.bloomIntensidad + beat * 0.9;
             
-            // Rotación sutil
             corazonParticulas.rotation.y = Math.sin(tiempo * 0.3) * 0.12;
         }
     }
@@ -1491,11 +1476,10 @@ function animar() {
         cameraShake = 0;
     }
     
-    // Alejar cámara cuando se forma el corazón
     let zCam = CONFIG.cameraZ;
     if (heartStarted) {
         const p = Math.min(corazonProgreso, 1);
-        zCam = CONFIG.cameraZ + p * 40; // Se aleja a 130
+        zCam = CONFIG.cameraZ + p * 40;
     }
     
     camera.position.x = swayX + shakeX;

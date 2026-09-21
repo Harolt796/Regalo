@@ -1,5 +1,5 @@
 // ============================================
-// REGALO 3D - VERSIÓN FINAL CORREGIDA
+// REGALO 3D - VERSIÓN FINAL CON GIF + MÚSICA
 // ============================================
 
 let scene, camera, renderer, composer, bloomPass;
@@ -113,11 +113,12 @@ function init() {
 
     renderer = new THREE.WebGLRenderer({
         antialias: !ES_MOVIL,
-        alpha: false,
+        alpha: true,
         powerPreference: 'high-performance'
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(DPR);
+    renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     renderer.domElement.style.touchAction = 'none';
@@ -406,13 +407,21 @@ function crearPolvoDorado() {
 }
 
 // ============================================
-// EMPEZAR
+// EMPEZAR (con música)
 // ============================================
 function empezar(e) {
     e.preventDefault();
     document.getElementById('intro').classList.add('oculto');
     document.getElementById('progreso').classList.add('visible');
     document.getElementById('hud').classList.add('visible');
+    
+    // ⭐ Iniciar la música de fondo
+    const musica = document.getElementById('musica-fondo');
+    if (musica) {
+        musica.volume = 0.4;
+        musica.play().catch(err => console.log('Audio bloqueado por el navegador:', err));
+    }
+    
     estado = 'cargando';
     setTimeout(() => mostrarFoto(0), 400);
 }
@@ -740,7 +749,6 @@ function onObjetivoClick(obj) {
             objetivos.forEach(o => { if (o.parent) scene.remove(o); });
             objetivos = [];
             
-            // Desafío épico (después de la foto 5) → Cinemática
             if (desafioEpicoActivo) {
                 desafioEpicoActivo = false;
                 document.getElementById('hud-texto').textContent = '💖 ¡El amor todo lo puede! 💖';
@@ -748,11 +756,9 @@ function onObjetivoClick(obj) {
                     iniciarCinematicaCorazon();
                 }, 1500);
             }
-            // FASE 1 del desafío final → FASE 2 (memorizar)
             else if (indiceFoto === 4 && faseFinal === 1) {
                 iniciarFaseMemorizar();
             }
-            // Niveles 1-4 → siguiente foto
             else if (indiceFoto < 4) {
                 if (fotoActual) scene.remove(fotoActual);
                 fotoActual = null;
@@ -941,8 +947,6 @@ function revelarFotoFinal() {
     document.getElementById('hud-texto').textContent = '✓ ¡COMPLETADO! ❤️';
     document.getElementById('hud-contador').textContent = '5 / 5';
     
-    // NO volvemos a llamar a mostrarFoto(4) — la foto 5 YA está mostrada.
-    // Solo esperamos 5 segundos y lanzamos el desafío épico
     setTimeout(() => {
         iniciarDesafioEpico();
     }, 5000);
@@ -963,13 +967,11 @@ function iniciarDesafioEpico() {
     document.getElementById('hud-texto').textContent = 'Rompe los 10 corazones antes del tiempo';
     estado = 'desafio';
     
-    // Hacer visible el HUD otra vez
     document.getElementById('hud').classList.add('visible');
     document.getElementById('progreso').classList.add('visible');
 
     iniciarTimer(25);
 
-    // Distribuir 10 corazones en 2 anillos concéntricos
     const posiciones = [];
     for (let i = 0; i < 10; i++) {
         const anillo = i < 5 ? 1 : 2;
@@ -1396,7 +1398,6 @@ function animar() {
             fotoActual.userData.textoEscrito = true;
             escribirTexto(indiceFoto);
             
-            // ⭐ Lanzar el desafío para TODAS las fotos (incluida la 5)
             setTimeout(() => {
                 if (estado === 'mostrandoFoto') {
                     estado = 'desafio';

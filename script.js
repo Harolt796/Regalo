@@ -1,5 +1,5 @@
 // ============================================
-// REGALO 3D - VERSIÓN FINAL CON DESAFÍO ÉPICO + CINEMÁTICA
+// REGALO 3D - VERSIÓN FINAL CORREGIDA
 // ============================================
 
 let scene, camera, renderer, composer, bloomPass;
@@ -28,7 +28,7 @@ let faseFinal = 0;
 let codigoColores = [];
 let secuenciaUsuario = [];
 let esferasFinales = [];
-let desafioEpicoActivo = false; // ⭐ Desafío después de la foto 5
+let desafioEpicoActivo = false;
 
 // === CINEMÁTICA FINAL DEL CORAZÓN ===
 let corazonParticulas = null;
@@ -605,9 +605,12 @@ function iniciarTimer(segundos) {
                 el.classList.add('oculto');
                 document.getElementById('hud-texto').textContent = 'Reiniciando desafío...';
                 
-                // Si es el desafío épico, reiniciarlo, si no, lanzar el desafío normal
                 if (desafioEpicoActivo) {
                     setTimeout(() => iniciarDesafioEpico(), 900);
+                } else if (indiceFoto === 4 && faseFinal === 0) {
+                    setTimeout(() => iniciarDesafioFinal(), 900);
+                } else if (faseFinal === 3) {
+                    setTimeout(() => iniciarFaseSecuencia(), 900);
                 } else {
                     setTimeout(() => lanzarDesafio(indiceFoto), 900);
                 }
@@ -737,7 +740,7 @@ function onObjetivoClick(obj) {
             objetivos.forEach(o => { if (o.parent) scene.remove(o); });
             objetivos = [];
             
-            // ⭐ CASO 1: Desafío épico (después de la foto 5) → Cinemática
+            // Desafío épico (después de la foto 5) → Cinemática
             if (desafioEpicoActivo) {
                 desafioEpicoActivo = false;
                 document.getElementById('hud-texto').textContent = '💖 ¡El amor todo lo puede! 💖';
@@ -745,11 +748,11 @@ function onObjetivoClick(obj) {
                     iniciarCinematicaCorazon();
                 }, 1500);
             }
-            // ⭐ CASO 2: FASE 1 del desafío final → FASE 2 (memorizar)
+            // FASE 1 del desafío final → FASE 2 (memorizar)
             else if (indiceFoto === 4 && faseFinal === 1) {
                 iniciarFaseMemorizar();
             }
-            // ⭐ CASO 3: Niveles 1-4 → siguiente foto
+            // Niveles 1-4 → siguiente foto
             else if (indiceFoto < 4) {
                 if (fotoActual) scene.remove(fotoActual);
                 fotoActual = null;
@@ -930,7 +933,7 @@ function onEsferaFinalClick(esfera) {
 }
 
 // ============================================
-// REVELAR FOTO 5 → Después viene el DESAFÍO ÉPICO
+// REVELAR FOTO 5 → viene el DESAFÍO ÉPICO
 // ============================================
 function revelarFotoFinal() {
     esferasFinales.forEach(e => { if (e.parent) scene.remove(e); });
@@ -938,16 +941,11 @@ function revelarFotoFinal() {
     document.getElementById('hud-texto').textContent = '✓ ¡COMPLETADO! ❤️';
     document.getElementById('hud-contador').textContent = '5 / 5';
     
+    // NO volvemos a llamar a mostrarFoto(4) — la foto 5 YA está mostrada.
+    // Solo esperamos 5 segundos y lanzamos el desafío épico
     setTimeout(() => {
-        if (fotoActual) scene.remove(fotoActual);
-        mostrarFoto(4);
-        
-        // ⭐ Después de 5 segundos, lanzar el DESAFÍO ÉPICO (NO la cinemática directa)
-        setTimeout(() => {
-            iniciarDesafioEpico();
-        }, 5000);
-        
-    }, 700);
+        iniciarDesafioEpico();
+    }, 5000);
 }
 
 // ============================================
@@ -1398,15 +1396,13 @@ function animar() {
             fotoActual.userData.textoEscrito = true;
             escribirTexto(indiceFoto);
             
-            // ⚠️ SOLO lanzar desafío para fotos 0-3 (NUNCA para foto 4)
-            if (indiceFoto < 4) {
-                setTimeout(() => {
-                    if (estado === 'mostrandoFoto') {
-                        estado = 'desafio';
-                        lanzarDesafio(indiceFoto);
-                    }
-                }, 2500);
-            }
+            // ⭐ Lanzar el desafío para TODAS las fotos (incluida la 5)
+            setTimeout(() => {
+                if (estado === 'mostrandoFoto') {
+                    estado = 'desafio';
+                    lanzarDesafio(indiceFoto);
+                }
+            }, 2500);
         }
     }
 

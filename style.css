@@ -39,8 +39,6 @@ html, body {
     inset: 0;
     z-index: 1;
     touch-action: none;
-    /* ⭐ El negro del canvas se vuelve transparente → se ve el GIF detrás,
-       pero los colores, texto, foto y galaxia se mantienen nítidos */
     mix-blend-mode: screen;
 }
 
@@ -193,18 +191,24 @@ html, body {
     font-size: 1.3rem;
     color: #ff4d6d;
     margin-bottom: 6px;
-    text-shadow: 0 0 20px rgba(255, 77, 109, 0.9), 0 0 40px rgba(255, 77, 109, 0.5), 0 0 8px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1);
+    text-shadow: 
+        -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
+        -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000,
+        0 0 20px rgba(255, 77, 109, 0.9), 0 0 40px rgba(255, 77, 109, 0.5);
     font-weight: 700;
     letter-spacing: 1.5px;
 }
 
 #historia-texto {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.85rem;
+    color: #ffffff;
     line-height: 1.5;
     font-style: italic;
     font-weight: 600;
-    text-shadow: 0 0 8px rgba(0, 0, 0, 1), 0 0 4px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 1);
+    text-shadow: 
+        -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000,
+        -1.5px 0 0 #000, 1.5px 0 0 #000, 0 -1.5px 0 #000, 0 1.5px 0 #000,
+        0 0 8px rgba(0,0,0,1);
 }
 
 /* ============ INTRO ============ */
@@ -381,36 +385,45 @@ html, body {
     transform: translate(-50%, -50%) scale(1);
 }
 
+/* ⭐ TÍTULO "Te Amo" — GRANDE + CONTORNO NEGRO GRUESO */
 #mensaje-final h1 {
-    font-size: 3.5rem;
+    font-size: 5rem;
     font-family: 'Georgia', serif;
     color: #ffd700;
-    font-weight: 300;
-    letter-spacing: 8px;
+    font-weight: 700;
+    letter-spacing: 10px;
+    margin-bottom: 20px;
     text-shadow: 
-        0 0 20px #ffd700, 
-        0 0 40px #ffd700, 
-        0 0 60px #ff4d6d,
-        0 0 100px #ff4d6d;
-    margin-bottom: 15px;
+        -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000,
+        -4px 0 0 #000, 4px 0 0 #000, 0 -4px 0 #000, 0 4px 0 #000,
+        -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+        0 0 20px #ffd700, 0 0 40px #ffd700, 0 0 60px #ff4d6d, 0 0 100px #ff4d6d;
     animation: pulsoTitulo 2s infinite alternate;
 }
 
 @keyframes pulsoTitulo {
     0% { 
         transform: scale(1); 
-        text-shadow: 0 0 20px #ffd700, 0 0 40px #ffd700, 0 0 60px #ff4d6d; 
+        text-shadow: 
+            -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000,
+            -4px 0 0 #000, 4px 0 0 #000, 0 -4px 0 #000, 0 4px 0 #000,
+            -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+            0 0 20px #ffd700, 0 0 40px #ffd700, 0 0 60px #ff4d6d;
     }
     100% { 
         transform: scale(1.05); 
-        text-shadow: 0 0 30px #ffd700, 0 0 60px #ffd700, 0 0 90px #ff4d6d, 0 0 120px #ff4d6d; 
+        text-shadow: 
+            -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000,
+            -4px 0 0 #000, 4px 0 0 #000, 0 -4px 0 #000, 0 4px 0 #000,
+            -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+            0 0 30px #ffd700, 0 0 60px #ffd700, 0 0 90px #ff4d6d, 0 0 120px #ff4d6d; 
     }
 }
 
 #mensaje-final .flores-deco {
-    font-size: 1.8rem;
-    margin-bottom: 18px;
-    filter: drop-shadow(0 0 15px #ffd700);
+    font-size: 2.2rem;
+    margin-bottom: 22px;
+    filter: drop-shadow(0 0 15px #ffd700) drop-shadow(0 0 4px #000);
     animation: flotarFlores 3s infinite ease-in-out;
 }
 
@@ -419,28 +432,40 @@ html, body {
     50% { transform: translateY(-8px); }
 }
 
+/* ⭐ TEXTO "Gracias por ser..." — GRANDE + CONTORNO NEGRO */
 #mensaje-final .mensaje-texto {
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.95);
-    line-height: 1.8;
+    font-size: 1.5rem;
+    color: #ffffff;
+    line-height: 1.7;
     letter-spacing: 1px;
     font-style: italic;
-    text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(255, 77, 109, 0.5);
-    margin-bottom: 22px;
+    font-weight: 600;
     font-family: 'Georgia', serif;
+    margin-bottom: 28px;
+    text-shadow: 
+        -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+        -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
+        -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
+        0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(255, 77, 109, 0.5);
 }
 
+/* ⭐ FIRMA "Feliz Día..." — GRANDE + CONTORNO NEGRO */
 #mensaje-final .firma {
-    font-size: 1.1rem;
+    font-size: 1.6rem;
     color: #ff4d6d;
-    letter-spacing: 4px;
-    text-shadow: 0 0 20px #ff4d6d, 0 0 40px #ff4d6d;
+    letter-spacing: 5px;
     font-family: 'Georgia', serif;
+    font-weight: 700;
+    text-shadow: 
+        -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+        -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
+        -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
+        0 0 20px #ff4d6d, 0 0 40px #ff4d6d;
     animation: firmaPulso 2.5s infinite alternate;
 }
 
 @keyframes firmaPulso {
-    0% { opacity: 0.7; }
+    0% { opacity: 0.85; }
     100% { opacity: 1; }
 }
 
@@ -450,8 +475,8 @@ html, body {
     #hud-texto { font-size: 0.75rem; }
     #hud-icono { font-size: 1.3rem; }
     #hud-nivel { font-size: 0.55rem; letter-spacing: 2px; }
-    #historia-titulo { font-size: 1.1rem; }
-    #historia-texto { font-size: 0.75rem; }
+    #historia-titulo { font-size: 1.15rem; }
+    #historia-texto { font-size: 0.78rem; }
     .intro-panel h1 { font-size: 2rem; }
     #codigo { top: 130px; padding: 11px 16px; }
     .color-codigo { width: 30px; height: 30px; }
@@ -459,18 +484,18 @@ html, body {
     .punto { width: 8px; height: 8px; }
     
     #mensaje-final h1 {
-        font-size: 2.3rem;
-        letter-spacing: 4px;
+        font-size: 3rem;
+        letter-spacing: 5px;
     }
     #mensaje-final .flores-deco {
-        font-size: 1.4rem;
+        font-size: 1.6rem;
     }
     #mensaje-final .mensaje-texto {
-        font-size: 0.85rem;
-        line-height: 1.7;
+        font-size: 1.05rem;
+        line-height: 1.6;
     }
     #mensaje-final .firma {
-        font-size: 0.9rem;
+        font-size: 1.15rem;
         letter-spacing: 2px;
     }
 }
@@ -485,6 +510,7 @@ html, body {
     .intro-panel { padding: 20px; }
     .intro-panel h1 { font-size: 1.6rem; }
     #codigo { top: 80px; }
-    #mensaje-final h1 { font-size: 1.8rem; letter-spacing: 3px; }
-    #mensaje-final .mensaje-texto { font-size: 0.75rem; }
+    #mensaje-final h1 { font-size: 2.3rem; letter-spacing: 4px; }
+    #mensaje-final .mensaje-texto { font-size: 0.95rem; }
+    #mensaje-final .firma { font-size: 1rem; }
 }

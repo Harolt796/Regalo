@@ -495,7 +495,6 @@ function mostrarFoto(indice) {
     loader.load(
         urlFoto,
         (tex) => {
-            // ⭐ Textura en máxima nitidez
             tex.minFilter = THREE.LinearFilter;
             tex.magFilter = THREE.LinearFilter;
             tex.generateMipmaps = false;
@@ -1296,12 +1295,9 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // ⭐ Ahora con DPR para que no se pixele al redimensionar
-    composer.setSize(window.innerWidth * DPR, window.innerHeight * DPR);
-    bloomPass.setSize(window.innerWidth * DPR, window.innerHeight * DPR);
-
-    if (composer.renderTarget1) composer.renderTarget1.setSize(window.innerWidth * DPR, window.innerHeight * DPR);
-    if (composer.renderTarget2) composer.renderTarget2.setSize(window.innerWidth * DPR, window.innerHeight * DPR);
+    // ⭐ El EffectComposer YA multiplica por DPR internamente.
+    // Solo le pasamos CSS pixels, él se encarga del resto.
+    composer.setSize(window.innerWidth, window.innerHeight);
 }
 
 // ============================================

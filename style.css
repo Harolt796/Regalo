@@ -11,10 +11,10 @@
     width: auto;
     height: auto;
     z-index: 0;
-    opacity: 0.30;                              /* 👈 subido de 0.30 */
+    opacity: 0.30;
     pointer-events: none;
     object-fit: cover;
-    filter: blur(1.5px) brightness(0.55);       /* 👈 brightness subido de 0.55 */
+    filter: blur(1.5px) brightness(0.65);
 }
 
 html, body {
@@ -39,8 +39,9 @@ html, body {
     inset: 0;
     z-index: 1;
     touch-action: none;
-    /* 🅱️ PLAN B: si el alphaPass del JS no deja ver el GIF, descomenta esta línea */
-    /* mix-blend-mode: screen; */
+    /* ⭐ El negro del canvas se vuelve transparente → se ve el GIF detrás,
+       pero los colores, texto, foto y galaxia se mantienen nítidos */
+    mix-blend-mode: screen;
 }
 
 /* ============ HUD ============ */
@@ -192,17 +193,18 @@ html, body {
     font-size: 1.3rem;
     color: #ff4d6d;
     margin-bottom: 6px;
-    text-shadow: 0 0 20px rgba(255, 77, 109, 0.9), 0 0 40px rgba(255, 77, 109, 0.5);
-    font-weight: 300;
+    text-shadow: 0 0 20px rgba(255, 77, 109, 0.9), 0 0 40px rgba(255, 77, 109, 0.5), 0 0 8px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1);
+    font-weight: 700;
     letter-spacing: 1.5px;
 }
 
 #historia-texto {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.95);
     line-height: 1.5;
     font-style: italic;
-    text-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
+    font-weight: 600;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 1), 0 0 4px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 1);
 }
 
 /* ============ INTRO ============ */

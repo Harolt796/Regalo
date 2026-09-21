@@ -1,5 +1,5 @@
 // ============================================
-// REGALO 3D DEFINITIVO - MÓVIL + PC
+// REGALO 3D - VERSIÓN CORREGIDA Y JUGABLE
 // ============================================
 
 let scene, camera, renderer, composer, bloomPass;
@@ -11,9 +11,10 @@ let raycaster = new THREE.Raycaster();
 let pointerNDC = new THREE.Vector2();
 let cameraShake = 0;
 let bursts = [];
-let objetosTocados = new Set();
+let ultimoTiempo = 0;
+let fpsContador = 0, fpsTiempoAcum = 0;
 
-// Estado
+// Estado del juego
 let estado = 'intro';
 let indiceFoto = 0;
 let objetivos = [];
@@ -29,14 +30,15 @@ let secuenciaUsuario = [];
 let esferasFinales = [];
 
 const ES_MOVIL = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-const DPR = Math.min(window.devicePixelRatio || 1, ES_MOVIL ? 1.5 : 2);
+const DPR = Math.min(window.devicePixelRatio || 1, 1.8);
 
 const CONFIG = {
     colorCorazon: 0xff4d6d,
     colorDorado: 0xffd700,
     colorAzul: 0x4d79ff,
     colorVerde: 0x66ffaa,
-    bloomIntensidad: 0.55
+    bloomIntensidad: 0.5,
+    cameraZ: 90
 };
 
 const HISTORIAS = [
@@ -64,15 +66,69 @@ const DESAFIOS = [
 ];
 
 // ============================================
-// INIT
+// FUNCIONES AUXILIARES DE DEBUG
+// ============================================
+function updateDebug() {
+    const el = document.getElementById('dbg-estado');
+    if (el) el.textContent = estado;
+    const el2 = document.getElementById('dbg-objs');
+    if (el2) el2.textContent = objetivos.filter(o => !o.userData.eliminado).length;
+}
+
+// Calcula posición segura según la pantalla
+// Retorna coords dentro del campo visible
+function posicionSegura(indice, total) {
+    // Área segura: X de -14 a 14, Y de -16 a 16 (funciona en móvil)
+    if (total === 1) return { x: 0, y: 0 };
+    
+    const patrones = {
+        3: [
+            { x: -13, y: 8 },
+            { x: 13, y: 8 },
+            { x: 0, y: -12 }
+        ],
+        5: [
+            { x: -14, y: 10 },
+            { x: 14, y: 10 },
+            { x: -10, y: -10 },
+            { x: 10, y: -10 },
+            { x: 0, y: 15 }
+        ],
+        7: [
+            { x: -14, y: 12 },
+            { x: 0, y: 14 },
+            { x: 14, y: 12 },
+            { x: -14, y: -4 },
+            { x: 14, y: -4 },
+            { x: -8, y: -13 },
+            { x: 8, y: -13 }
+        ],
+        4: [
+            { x: -12, y: 8 },
+            { x: -5, y: 14 },
+            { x: 5, y: 8 },
+            { x: 12, y: 14 }
+        ]
+    };
+    
+    const patron = patrones[total] || patrones[3];
+    const p = patron[indice % patron.length];
+    return p;
+}
+
+// ============================================
+// INICIALIZACIÓN
 // ============================================
 function init() {
     reloj = new THREE.Clock();
+    reloj.start();
+    
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.0035);
+    scene.fog = new THREE.FogExp2(0x000000, 0.003);
 
     camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 3000);
-    camera.position.set(0, 0, 55);
+    camera.position.set(0, 0, CONFIG.cameraZ);
+    camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({
         antialias: !ES_MOVIL,
@@ -82,7 +138,7 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(DPR);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.2;
     renderer.domElement.style.touchAction = 'none';
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
@@ -113,7 +169,6 @@ function init() {
         if (e.touches.length > 1) e.preventDefault();
     }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
-    document.addEventListener('contextmenu', (e) => e.preventDefault());
 
     const btn = document.getElementById('btn-empezar');
     btn.addEventListener('pointerdown', empezar);
@@ -123,53 +178,45 @@ function init() {
 }
 
 function configurarLuces() {
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const l1 = new THREE.PointLight(CONFIG.colorCorazon, 1.8, 500);
     l1.position.set(30, 30, 50);
     scene.add(l1);
-    const l2 = new THREE.PointLight(CONFIG.colorDorado, 1.3, 500);
+    const l2 = new THREE.PointLight(CONFIG.colorDorado, 1.5, 500);
     l2.position.set(-30, -25, 45);
     scene.add(l2);
     const l3 = new THREE.PointLight(CONFIG.colorAzul, 1.5, 500);
     l3.position.set(0, 25, -70);
     scene.add(l3);
-    const l4 = new THREE.PointLight(0xff88cc, 1, 500);
+    const l4 = new THREE.PointLight(0xff88cc, 1.2, 500);
     l4.position.set(40, -20, 30);
     scene.add(l4);
 }
 
 // ============================================
-// AMBIENTE DETALLADO
+// AMBIENTE
 // ============================================
 function crearEstrellas() {
-    const cantidad = ES_MOVIL ? 2000 : 5000;
+    const cantidad = ES_MOVIL ? 1500 : 4000;
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(cantidad * 3);
     const col = new Float32Array(cantidad * 3);
-    const size = new Float32Array(cantidad);
     const paleta = [
-        new THREE.Color(0xffffff),
-        new THREE.Color(0xffd700),
-        new THREE.Color(0xffb3c6),
-        new THREE.Color(0x99ccff),
-        new THREE.Color(0xff88cc)
+        new THREE.Color(0xffffff), new THREE.Color(0xffd700),
+        new THREE.Color(0xffb3c6), new THREE.Color(0x99ccff), new THREE.Color(0xff88cc)
     ];
     for (let i = 0; i < cantidad; i++) {
         pos[i * 3] = (Math.random() - 0.5) * 2200;
         pos[i * 3 + 1] = (Math.random() - 0.5) * 2200;
         pos[i * 3 + 2] = (Math.random() - 0.5) * 2200;
         const c = paleta[Math.floor(Math.random() * paleta.length)];
-        col[i * 3] = c.r;
-        col[i * 3 + 1] = c.g;
-        col[i * 3 + 2] = c.b;
-        size[i] = Math.random();
+        col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     const mat = new THREE.PointsMaterial({
-        size: 0.85, vertexColors: true, transparent: true,
-        opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false,
-        sizeAttenuation: true
+        size: 0.9, vertexColors: true, transparent: true,
+        opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false
     });
     estrellas = new THREE.Points(geo, mat);
     scene.add(estrellas);
@@ -178,7 +225,7 @@ function crearEstrellas() {
 function crearNebulosas() {
     const coloresN = [0x6a00ff, 0xff00aa, 0xff4d6d, 0xffd700, 0x4d79ff];
     for (let n = 0; n < coloresN.length; n++) {
-        const cantidad = ES_MOVIL ? 300 : 500;
+        const cantidad = ES_MOVIL ? 250 : 400;
         const geo = new THREE.BufferGeometry();
         const pos = new Float32Array(cantidad * 3);
         const c = new THREE.Color(coloresN[n]);
@@ -195,17 +242,15 @@ function crearNebulosas() {
             color: c, size: 3.5, transparent: true, opacity: 0.12,
             blending: THREE.AdditiveBlending, depthWrite: false
         });
-        const neb = new THREE.Points(geo, mat);
-        nebulosas.push(neb);
-        scene.add(neb);
+        nebulosas.push(new THREE.Points(geo, mat));
+        scene.add(nebulosas[nebulosas.length - 1]);
     }
 }
 
 function crearAuroras() {
-    // Capas de auroras onduladas
     const coloresAurora = [0xff4d6d, 0xffd700, 0x4d79ff, 0xff88cc];
     for (let a = 0; a < 4; a++) {
-        const puntos = 60;
+        const puntos = 50;
         const geo = new THREE.BufferGeometry();
         const pos = new Float32Array(puntos * 3);
         for (let i = 0; i < puntos; i++) {
@@ -215,19 +260,11 @@ function crearAuroras() {
         }
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
         const mat = new THREE.PointsMaterial({
-            color: coloresAurora[a],
-            size: 1.8,
-            transparent: true,
-            opacity: 0.35,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
+            color: coloresAurora[a], size: 1.8, transparent: true, opacity: 0.35,
+            blending: THREE.AdditiveBlending, depthWrite: false
         });
         const aurora = new THREE.Points(geo, mat);
-        aurora.position.set(
-            (Math.random() - 0.5) * 100,
-            30 + a * 5,
-            -80 - a * 20
-        );
+        aurora.position.set((Math.random() - 0.5) * 100, 30 + a * 5, -80 - a * 20);
         aurora.userData = {
             offset: Math.random() * Math.PI * 2,
             velocidad: 0.3 + Math.random() * 0.3,
@@ -245,27 +282,22 @@ function crearPlanetas() {
         const grupo = new THREE.Group();
         const tam = 6 + Math.random() * 10;
         const color = coloresP[i];
-        const geo = new THREE.SphereGeometry(tam, 24, 24);
+        const geo = new THREE.SphereGeometry(tam, 20, 20);
         const mat = new THREE.MeshStandardMaterial({
-            color: color,
-            emissive: color,
-            emissiveIntensity: 0.4,
-            metalness: 0.6,
-            roughness: 0.5
+            color: color, emissive: color, emissiveIntensity: 0.35,
+            metalness: 0.5, roughness: 0.6
         });
         grupo.add(new THREE.Mesh(geo, mat));
 
-        // Atmósfera
-        const atmGeo = new THREE.SphereGeometry(tam * 1.18, 24, 24);
+        const atmGeo = new THREE.SphereGeometry(tam * 1.18, 20, 20);
         const atmMat = new THREE.MeshBasicMaterial({
             color: color, transparent: true, opacity: 0.12,
             blending: THREE.AdditiveBlending, side: THREE.BackSide
         });
         grupo.add(new THREE.Mesh(atmGeo, atmMat));
 
-        // Anillos
         if (i % 2 === 0) {
-            const aGeo = new THREE.TorusGeometry(tam * 1.8, 0.5, 12, 100);
+            const aGeo = new THREE.TorusGeometry(tam * 1.8, 0.5, 10, 80);
             const aMat = new THREE.MeshBasicMaterial({
                 color: 0xffffff, transparent: true, opacity: 0.35,
                 blending: THREE.AdditiveBlending
@@ -274,30 +306,9 @@ function crearPlanetas() {
             anillo.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.7;
             anillo.rotation.y = (Math.random() - 0.5) * 0.5;
             grupo.add(anillo);
-
-            const a2Geo = new THREE.TorusGeometry(tam * 2.1, 0.3, 12, 100);
-            const a2Mat = new THREE.MeshBasicMaterial({
-                color: color, transparent: true, opacity: 0.25,
-                blending: THREE.AdditiveBlending
-            });
-            const anillo2 = new THREE.Mesh(a2Geo, a2Mat);
-            anillo2.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.7;
-            grupo.add(anillo2);
         }
 
-        // Luna
-        if (i === 1) {
-            const lunaGeo = new THREE.SphereGeometry(1.2, 12, 12);
-            const lunaMat = new THREE.MeshStandardMaterial({
-                color: 0xcccccc, emissive: 0x666666, emissiveIntensity: 0.4
-            });
-            const luna = new THREE.Mesh(lunaGeo, lunaMat);
-            luna.userData.orbitaVel = 0.02;
-            luna.userData.orbitaRadio = tam * 3;
-            grupo.add(luna);
-        }
-
-        const distancia = 380 + Math.random() * 250;
+        const distancia = 380 + Math.random() * 200;
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
         grupo.position.set(
@@ -316,7 +327,7 @@ function crearPlanetas() {
 }
 
 function crearCristalesAmbientales() {
-    const cantidad = ES_MOVIL ? 20 : 35;
+    const cantidad = ES_MOVIL ? 15 : 30;
     for (let i = 0; i < cantidad; i++) {
         const tipo = Math.random();
         let geo;
@@ -326,18 +337,12 @@ function crearCristalesAmbientales() {
 
         const coloresC = [0xff4d6d, 0xffd700, 0x99ccff, 0xff8fab, 0xffffff];
         const c = coloresC[Math.floor(Math.random() * coloresC.length)];
-        const mat = new THREE.MeshPhysicalMaterial({
-            color: c,
-            emissive: c,
-            emissiveIntensity: 0.6,
-            metalness: 0.5,
-            roughness: 0.15,
-            transparent: true,
-            opacity: 0.85,
-            clearcoat: 1
+        const mat = new THREE.MeshStandardMaterial({
+            color: c, emissive: c, emissiveIntensity: 0.6,
+            metalness: 0.5, roughness: 0.2
         });
         const cristal = new THREE.Mesh(geo, mat);
-        const radio = 35 + Math.random() * 90;
+        const radio = 60 + Math.random() * 80;
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
         cristal.position.set(
@@ -360,20 +365,17 @@ function crearCristalesAmbientales() {
 }
 
 function crearFloresAmbientales() {
-    const cantidad = ES_MOVIL ? 40 : 70;
+    const cantidad = ES_MOVIL ? 30 : 60;
     for (let i = 0; i < cantidad; i++) {
-        const tam = 0.3 + Math.random() * 0.9;
-        const geo = new THREE.SphereGeometry(tam, 12, 12);
+        const tam = 0.4 + Math.random() * 0.9;
+        const geo = new THREE.SphereGeometry(tam, 10, 10);
         const c = [0xff4d6d, 0xff8fab, 0xffc2d1, 0xffd700, 0xff88cc][Math.floor(Math.random() * 5)];
         const mat = new THREE.MeshStandardMaterial({
-            color: c,
-            emissive: c,
-            emissiveIntensity: 0.9,
-            metalness: 0.3,
-            roughness: 0.4
+            color: c, emissive: c, emissiveIntensity: 0.9,
+            metalness: 0.3, roughness: 0.4
         });
         const esf = new THREE.Mesh(geo, mat);
-        const radio = 50 + Math.random() * 90;
+        const radio = 60 + Math.random() * 90;
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
         esf.position.set(
@@ -385,8 +387,7 @@ function crearFloresAmbientales() {
             radio, theta, phi,
             velocidad: 0.0004 + Math.random() * 0.0012,
             baseY: esf.position.y,
-            offsetY: Math.random() * 6,
-            tamBase: tam
+            offsetY: Math.random() * 6
         };
         floresAmb.push(esf);
         scene.add(esf);
@@ -394,19 +395,17 @@ function crearFloresAmbientales() {
 }
 
 function crearPolvoDorado() {
-    const cantidad = ES_MOVIL ? 200 : 400;
+    const cantidad = ES_MOVIL ? 150 : 300;
     for (let i = 0; i < cantidad; i++) {
-        const tam = 0.05 + Math.random() * 0.15;
+        const tam = 0.06 + Math.random() * 0.15;
         const geo = new THREE.SphereGeometry(tam, 4, 4);
         const c = [0xffd700, 0xff4d6d, 0xffffff, 0xff88cc][Math.floor(Math.random() * 4)];
         const mat = new THREE.MeshBasicMaterial({
-            color: c,
-            transparent: true,
-            opacity: 0.8,
+            color: c, transparent: true, opacity: 0.8,
             blending: THREE.AdditiveBlending
         });
         const p = new THREE.Mesh(geo, mat);
-        const radio = 15 + Math.random() * 50;
+        const radio = 20 + Math.random() * 50;
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
         p.position.set(
@@ -430,6 +429,7 @@ function crearPolvoDorado() {
 // ============================================
 function empezar(e) {
     e.preventDefault();
+    console.log('>>> Iniciando juego');
     document.getElementById('intro').classList.add('oculto');
     document.getElementById('progreso').classList.add('visible');
     document.getElementById('hud').classList.add('visible');
@@ -441,6 +441,7 @@ function empezar(e) {
 // FOTO
 // ============================================
 function mostrarFoto(indice) {
+    console.log('>>> Mostrando foto', indice);
     indiceFoto = indice;
     actualizarProgreso();
     estado = 'mostrandoFoto';
@@ -454,49 +455,36 @@ function mostrarFoto(indice) {
 
     const grupo = new THREE.Group();
 
-    // Fondo negro detrás de la foto (evita que se vea lavada)
-    const fondoGeo = new THREE.PlaneGeometry(24, 32);
-    const fondoMat = new THREE.MeshBasicMaterial({ color: 0x0a0510 });
-    const fondoMesh = new THREE.Mesh(fondoGeo, fondoMat);
-    fondoMesh.position.z = -0.2;
-    grupo.add(fondoMesh);
-
     // Marco dorado
     const marcoGeo = new THREE.BoxGeometry(25, 33, 0.5);
     const marcoMat = new THREE.MeshStandardMaterial({
         color: 0xcc9900,
         emissive: 0x553300,
-        emissiveIntensity: 0.4,
+        emissiveIntensity: 0.3,
         metalness: 0.95,
         roughness: 0.25
     });
-    const marco = new THREE.Mesh(marcoGeo, marcoMat);
-    marco.position.z = -0.15;
-    grupo.add(marco);
+    grupo.add(new THREE.Mesh(marcoGeo, marcoMat));
 
-    // Detalles decorativos del marco (esquinas)
+    // Esquinas decorativas
     for (let i = 0; i < 4; i++) {
-        const esquinaGeo = new THREE.SphereGeometry(0.5, 8, 8);
-        const esquinaMat = new THREE.MeshStandardMaterial({
-            color: 0xffd700,
-            emissive: 0xffaa00,
-            emissiveIntensity: 1,
-            metalness: 1,
-            roughness: 0.1
+        const esqGeo = new THREE.SphereGeometry(0.6, 8, 8);
+        const esqMat = new THREE.MeshStandardMaterial({
+            color: 0xffd700, emissive: 0xffaa00, emissiveIntensity: 1,
+            metalness: 1, roughness: 0.1
         });
-        const esquina = new THREE.Mesh(esquinaGeo, esquinaMat);
+        const esq = new THREE.Mesh(esqGeo, esqMat);
         const ex = (i % 2) * 2 - 1;
         const ey = Math.floor(i / 2) * 2 - 1;
-        esquina.position.set(ex * 12, ey * 16, 0.2);
-        grupo.add(esquina);
+        esq.position.set(ex * 12.3, ey * 16.3, 0.3);
+        grupo.add(esq);
     }
 
-    // Foto real
+    // Foto
     const fotoGeo = new THREE.PlaneGeometry(23, 31);
     const fotoMat = new THREE.MeshBasicMaterial({
         color: 0x222222,
-        transparent: false,
-        toneMapped: false  // ESTO ES CLAVE: evita que el bloom y tone mapping la lave
+        toneMapped: false
     });
     const fotoMesh = new THREE.Mesh(fotoGeo, fotoMat);
     fotoMesh.position.z = 0.3;
@@ -504,19 +492,21 @@ function mostrarFoto(indice) {
 
     const loader = new THREE.TextureLoader();
     const urlFoto = encodeURI(FOTOS[indice]);
+    console.log('>>> Cargando:', urlFoto);
     
     loader.load(
         urlFoto,
         (tex) => {
+            console.log('>>> Foto OK');
             tex.minFilter = THREE.LinearFilter;
             tex.magFilter = THREE.LinearFilter;
-            tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
             fotoMat.map = tex;
             fotoMat.color.set(0xffffff);
             fotoMat.needsUpdate = true;
         },
         undefined,
-        () => {
+        (err) => {
+            console.log('>>> Error foto, probando alt:', err);
             const urlAlt = urlFoto.replace(/%20/g, '-');
             loader.load(urlAlt, (tex) => {
                 fotoMat.map = tex;
@@ -526,34 +516,13 @@ function mostrarFoto(indice) {
         }
     );
 
-    // Aura exterior muy sutil
-    const auraGeo = new THREE.PlaneGeometry(30, 38);
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createRadialGradient(128, 128, 60, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255, 77, 109, 0)');
-    grad.addColorStop(0.7, 'rgba(255, 77, 109, 0.15)');
-    grad.addColorStop(1, 'rgba(255, 77, 109, 0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 256, 256);
-    const auraMat = new THREE.MeshBasicMaterial({
-        map: new THREE.CanvasTexture(canvas),
-        transparent: true,
-        opacity: 0.8,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        toneMapped: false
-    });
-    const aura = new THREE.Mesh(auraGeo, auraMat);
-    aura.position.z = -0.6;
-    grupo.add(aura);
-
-    grupo.position.set(0, 0, -300);
+    grupo.position.set(0, 0, 0);
     grupo.rotation.set(0, Math.PI * 2, 0);
     grupo.scale.set(0.1, 0.1, 0.1);
-    grupo.userData = { tiempoInicio: reloj.getElapsedTime(), textoEscrito: false };
+    grupo.userData = { 
+        tiempoInicio: reloj.getElapsedTime(), 
+        textoEscrito: false 
+    };
     
     fotoActual = grupo;
     scene.add(grupo);
@@ -600,8 +569,8 @@ function actualizarProgreso() {
 }
 
 function lanzarDesafio(indice) {
+    console.log('>>> Lanzando desafío', indice);
     objetivos = [];
-    objetivosTocados.clear();
     const desafio = DESAFIOS[indice];
     
     document.getElementById('hud-icono').textContent = desafio.icono;
@@ -619,24 +588,13 @@ function lanzarDesafio(indice) {
 
     if (desafio.timer > 0) iniciarTimer(desafio.timer);
 
-    // Posiciones FIJA dentro del campo visible
-    // Cámara a z=55, FOV 58° -> altura visible ~60, ancho ~100 en pantalla normal
-    // Dejamos objetivos entre -25 y 25 en X, -18 y 18 en Y, a z=5
-    const posicionesBase = [
-        [0, 0, 5],                                   // 1 solo
-        [-18, 8, 5], [18, 8, 5], [0, -12, 5],        // 3
-        [-22, 12, 5], [22, 12, 5], [-12, -10, 5], [12, -10, 5], [0, 15, 5],   // 5
-        [-24, 14, 5], [24, 14, 5], [-24, -8, 5], [24, -8, 5],                   // 7 primeros
-        [-10, 0, 5], [10, 0, 5], [0, -15, 5]
-    ];
-
     for (let i = 0; i < desafio.total; i++) {
         const obj = crearObjetivo(desafio.tipo, i);
-        const p = posicionesBase[i % posicionesBase.length];
-        obj.position.set(p[0], p[1], p[2]);
-        obj.userData.baseX = p[0];
-        obj.userData.baseY = p[1];
-        obj.userData.baseZ = p[2];
+        const pos = posicionSegura(i, desafio.total);
+        obj.position.set(pos.x, pos.y, 8);
+        obj.userData.baseX = pos.x;
+        obj.userData.baseY = pos.y;
+        obj.userData.baseZ = 8;
         obj.userData.offsetFlot = Math.random() * 6;
         obj.userData.escalaBase = 0;
         obj.userData.rotVel = 0.012 + Math.random() * 0.02;
@@ -655,6 +613,7 @@ function lanzarDesafio(indice) {
         scene.add(obj);
         objetivos.push(obj);
     }
+    console.log('>>> Objetivos creados:', objetivos.length);
 }
 
 function actualizarContador() {
@@ -697,24 +656,28 @@ function detenerTimer() {
 
 function crearObjetivo(tipo, indice) {
     const grupo = new THREE.Group();
+    let colorPrincipal = 0xffffff;
+    
+    if (tipo === 'orbe') colorPrincipal = CONFIG.colorDorado;
+    else if (tipo === 'corazon') colorPrincipal = 0xff4d6d;
+    else if (tipo === 'estrella') colorPrincipal = 0xffd700;
+    else if (tipo === 'cristal') colorPrincipal = 0x99ccff;
     
     if (tipo === 'orbe') {
-        const geo = new THREE.SphereGeometry(2.5, 32, 32);
-        const mat = new THREE.MeshBasicMaterial({
-            color: CONFIG.colorDorado, toneMapped: false
-        });
+        const geo = new THREE.SphereGeometry(2.8, 32, 32);
+        const mat = new THREE.MeshBasicMaterial({ color: colorPrincipal, toneMapped: false });
         grupo.add(new THREE.Mesh(geo, mat));
         
-        const auraGeo = new THREE.SphereGeometry(5, 20, 20);
+        const auraGeo = new THREE.SphereGeometry(5.5, 20, 20);
         const auraMat = new THREE.MeshBasicMaterial({
-            color: CONFIG.colorDorado, transparent: true, opacity: 0.2,
+            color: colorPrincipal, transparent: true, opacity: 0.2,
             blending: THREE.AdditiveBlending, side: THREE.BackSide, toneMapped: false
         });
         grupo.add(new THREE.Mesh(auraGeo, auraMat));
         
-        const ringGeo = new THREE.TorusGeometry(4, 0.2, 8, 80);
+        const ringGeo = new THREE.TorusGeometry(4.5, 0.22, 8, 80);
         const ringMat = new THREE.MeshBasicMaterial({
-            color: CONFIG.colorCorazon, transparent: true, opacity: 0.9,
+            color: 0xff4d6d, transparent: true, opacity: 0.9,
             blending: THREE.AdditiveBlending, toneMapped: false
         });
         const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -723,7 +686,7 @@ function crearObjetivo(tipo, indice) {
         
     } else if (tipo === 'corazon') {
         const shape = new THREE.Shape();
-        const s = 1;
+        const s = 1.1;
         shape.moveTo(0, 0);
         shape.bezierCurveTo(0, 0, -s, -s, -s, -s*2);
         shape.bezierCurveTo(-s, -s*3, 0, -s*3.5, 0, -s*4);
@@ -733,15 +696,13 @@ function crearObjetivo(tipo, indice) {
             depth: 0.5, bevelEnabled: true,
             bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 4
         });
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0xff4d6d, toneMapped: false
-        });
+        const mat = new THREE.MeshBasicMaterial({ color: colorPrincipal, toneMapped: false });
         const corazon = new THREE.Mesh(geo, mat);
         corazon.rotation.z = Math.PI;
-        corazon.position.y = 2;
+        corazon.position.y = 2.2;
         grupo.add(corazon);
         
-        const ringGeo = new THREE.TorusGeometry(4.5, 0.18, 8, 60);
+        const ringGeo = new THREE.TorusGeometry(5, 0.2, 8, 60);
         const ringMat = new THREE.MeshBasicMaterial({
             color: 0xffd700, transparent: true, opacity: 0.9,
             blending: THREE.AdditiveBlending, toneMapped: false
@@ -751,15 +712,13 @@ function crearObjetivo(tipo, indice) {
         grupo.add(ring);
         
     } else if (tipo === 'estrella') {
-        const geo = new THREE.OctahedronGeometry(2.5, 0);
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0xffd700, toneMapped: false
-        });
+        const geo = new THREE.OctahedronGeometry(2.8, 0);
+        const mat = new THREE.MeshBasicMaterial({ color: colorPrincipal, toneMapped: false });
         const estrella = new THREE.Mesh(geo, mat);
         estrella.scale.set(1.2, 1.2, 0.4);
         grupo.add(estrella);
         
-        const ringGeo = new THREE.TorusGeometry(4.3, 0.18, 8, 60);
+        const ringGeo = new THREE.TorusGeometry(4.8, 0.2, 8, 60);
         const ringMat = new THREE.MeshBasicMaterial({
             color: 0xffffff, transparent: true, opacity: 0.9,
             blending: THREE.AdditiveBlending, toneMapped: false
@@ -769,13 +728,11 @@ function crearObjetivo(tipo, indice) {
         grupo.add(ring);
         
     } else if (tipo === 'cristal') {
-        const geo = new THREE.IcosahedronGeometry(2.5, 0);
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0x99ccff, toneMapped: false
-        });
+        const geo = new THREE.IcosahedronGeometry(2.8, 0);
+        const mat = new THREE.MeshBasicMaterial({ color: colorPrincipal, toneMapped: false });
         grupo.add(new THREE.Mesh(geo, mat));
         
-        const ringGeo = new THREE.TorusGeometry(4.3, 0.18, 8, 60);
+        const ringGeo = new THREE.TorusGeometry(4.8, 0.2, 8, 60);
         const ringMat = new THREE.MeshBasicMaterial({
             color: 0x99ccff, transparent: true, opacity: 0.9,
             blending: THREE.AdditiveBlending, toneMapped: false
@@ -793,6 +750,7 @@ function crearObjetivo(tipo, indice) {
 
 function onObjetivoClick(obj) {
     if (obj.userData.eliminado) return;
+    console.log('>>> Objetivo clickeado');
     obj.userData.eliminado = true;
     objetivosRestantes--;
     actualizarContador();
@@ -832,13 +790,16 @@ function iniciarDesafioFinal() {
     document.getElementById('hud-texto').textContent = 'FASE 1: Rompe 5 corazones';
     estado = 'desafio';
 
-    const posiciones = [[-18, 10], [18, 10], [0, 15], [-15, -10], [15, -10]];
+    const posiciones = [
+        { x: -14, y: 10 }, { x: 14, y: 10 }, { x: 0, y: 15 },
+        { x: -12, y: -10 }, { x: 12, y: -10 }
+    ];
     for (let i = 0; i < 5; i++) {
         const obj = crearObjetivo('corazon', i);
-        obj.position.set(posiciones[i][0], posiciones[i][1], 5);
-        obj.userData.baseX = posiciones[i][0];
-        obj.userData.baseY = posiciones[i][1];
-        obj.userData.baseZ = 5;
+        obj.position.set(posiciones[i].x, posiciones[i].y, 8);
+        obj.userData.baseX = posiciones[i].x;
+        obj.userData.baseY = posiciones[i].y;
+        obj.userData.baseZ = 8;
         obj.userData.escalaBase = 0;
         obj.userData.mov = 'orbitaRapida';
         obj.userData.offsetFlot = Math.random() * 6;
@@ -855,10 +816,8 @@ function iniciarFaseMemorizar() {
     document.getElementById('hud-contador').textContent = '👀';
     
     const colores = [
-        { color: 0xff4d6d },
-        { color: 0xffd700 },
-        { color: 0x4d79ff },
-        { color: 0x66ffaa }
+        { color: 0xff4d6d }, { color: 0xffd700 },
+        { color: 0x4d79ff }, { color: 0x66ffaa }
     ];
     
     codigoColores = [];
@@ -897,18 +856,18 @@ function iniciarFaseSecuencia() {
     
     iniciarTimer(30);
     
-    const posiciones = [[-18, 8], [-6, 14], [6, 8], [18, 14]];
+    const posiciones = [
+        { x: -12, y: 8 }, { x: -5, y: 14 }, { x: 5, y: 8 }, { x: 12, y: 14 }
+    ];
     const coloresMezclados = [...codigoColores].sort(() => Math.random() - 0.5);
     
     coloresMezclados.forEach((c, i) => {
         const grupo = new THREE.Group();
-        const geo = new THREE.SphereGeometry(2.8, 32, 32);
-        const mat = new THREE.MeshBasicMaterial({
-            color: c.color, toneMapped: false
-        });
+        const geo = new THREE.SphereGeometry(3, 32, 32);
+        const mat = new THREE.MeshBasicMaterial({ color: c.color, toneMapped: false });
         grupo.add(new THREE.Mesh(geo, mat));
         
-        const ringGeo = new THREE.TorusGeometry(4.2, 0.18, 8, 60);
+        const ringGeo = new THREE.TorusGeometry(4.5, 0.2, 8, 60);
         const ringMat = new THREE.MeshBasicMaterial({
             color: c.color, transparent: true, opacity: 0.9,
             blending: THREE.AdditiveBlending, toneMapped: false
@@ -917,14 +876,14 @@ function iniciarFaseSecuencia() {
         ring.userData.esAnilloPulso = true;
         grupo.add(ring);
         
-        grupo.position.set(posiciones[i][0], posiciones[i][1], 5);
+        grupo.position.set(posiciones[i].x, posiciones[i].y, 8);
         grupo.userData = {
             tipo: 'esferaFinal',
             colorId: c.color,
             eliminado: false,
             hover: false,
             escalaBase: 0,
-            baseY: posiciones[i][1],
+            baseY: posiciones[i].y,
             phase: i
         };
         scene.add(grupo);
@@ -1039,23 +998,21 @@ function crearBurst(x, y, z) {
 }
 
 // ============================================
-// METEOROS (AHORA VISIBLES EN PC Y MÓVIL)
+// METEOROS
 // ============================================
 function crearMeteoro() {
     const grupo = new THREE.Group();
     
-    // Cabeza brillante
-    const cabezaGeo = new THREE.SphereGeometry(0.7, 8, 8);
+    const cabezaGeo = new THREE.SphereGeometry(0.9, 8, 8);
     const cabezaMat = new THREE.MeshBasicMaterial({
         color: 0xffffff, toneMapped: false
     });
     grupo.add(new THREE.Mesh(cabezaGeo, cabezaMat));
     
-    // Estela (varios puntos decrecientes)
     const coloresEstela = [0xffd700, 0xff8fab, 0xff4d6d, 0xffffff];
-    for (let i = 0; i < 8; i++) {
-        const t = (i + 1) / 8;
-        const tamEstela = 0.7 * (1 - t * 0.8);
+    for (let i = 0; i < 6; i++) {
+        const t = (i + 1) / 6;
+        const tamEstela = 0.9 * (1 - t * 0.8);
         const geo = new THREE.SphereGeometry(tamEstela, 6, 6);
         const mat = new THREE.MeshBasicMaterial({
             color: coloresEstela[i % coloresEstela.length],
@@ -1065,28 +1022,22 @@ function crearMeteoro() {
             toneMapped: false
         });
         const punto = new THREE.Mesh(geo, mat);
-        punto.position.set(t * 4, -t * 1.5, 0);
+        punto.position.set(-t * 4, -t * 1.5, 0);
         grupo.add(punto);
     }
     
-    // Punto de inicio aleatorio arriba-izquierda o arriba-derecha
     const lado = Math.random() > 0.5 ? 1 : -1;
-    const startX = lado * (30 + Math.random() * 20);
-    const startY = 25 + Math.random() * 15;
-    const startZ = -10 + Math.random() * 20;
+    const startX = lado * (25 + Math.random() * 15);
+    const startY = 25 + Math.random() * 10;
+    const startZ = -5 + Math.random() * 15;
     
     grupo.position.set(startX, startY, startZ);
     
-    // Ángulo descendente
     const anguloZ = lado > 0 ? -Math.PI / 5 : Math.PI / 5;
     grupo.rotation.z = anguloZ;
     
-    // Velocidad
-    const velX = -lado * (25 + Math.random() * 15);
-    const velY = -15 - Math.random() * 10;
-    
     grupo.userData = {
-        vel: new THREE.Vector3(velX, velY, 0),
+        vel: new THREE.Vector3(-lado * 20, -12, 0),
         vida: 0,
         vidaMax: 3
     };
@@ -1167,17 +1118,27 @@ function easeOutBack(t) {
     const c3 = c1 + 1;
     return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
-function easeInOut(t) {
-    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-}
 
 // ============================================
 // ANIMACIÓN
 // ============================================
 function animar() {
     requestAnimationFrame(animar);
-    const tiempo = reloj.getElapsedTime();
-    const delta = Math.min(reloj.getDelta(), 0.08);
+    
+    const tiempoActual = reloj.getElapsedTime();
+    const delta = Math.min(tiempoActual - ultimoTiempo, 0.08);
+    ultimoTiempo = tiempoActual;
+    const tiempo = tiempoActual;
+
+    // Debug FPS
+    fpsContador++;
+    fpsTiempoAcum += delta;
+    if (fpsTiempoAcum >= 0.5) {
+        document.getElementById('dbg-fps').textContent = Math.round(fpsContador / fpsTiempoAcum);
+        fpsContador = 0;
+        fpsTiempoAcum = 0;
+        updateDebug();
+    }
 
     // Estrellas
     if (estrellas) estrellas.rotation.y += 0.00008;
@@ -1206,17 +1167,9 @@ function animar() {
         const d = p.userData.orbR;
         p.position.x = d * Math.sin(p.userData.orbP) * Math.cos(p.userData.orbT);
         p.position.z = d * Math.sin(p.userData.orbP) * Math.sin(p.userData.orbT);
-        
-        // Luna orbitando
-        p.children.forEach(c => {
-            if (c.userData.orbitaVel) {
-                c.position.x = Math.cos(tiempo * c.userData.orbitaVel) * c.userData.orbitaRadio;
-                c.position.z = Math.sin(tiempo * c.userData.orbitaVel) * c.userData.orbitaRadio;
-            }
-        });
     });
 
-    // Cristales ambientales
+    // Cristales
     cristalesAmb.forEach(c => {
         const d = c.userData;
         d.theta += d.vel;
@@ -1227,7 +1180,7 @@ function animar() {
         c.rotation.z += d.rot.z;
     });
 
-    // Flores ambientales
+    // Flores
     floresAmb.forEach((f, i) => {
         const d = f.userData;
         d.theta += d.velocidad;
@@ -1238,8 +1191,8 @@ function animar() {
         f.scale.set(resp, resp, resp);
     });
 
-    // Polvo dorado
-    polvoDorado.forEach((p, i) => {
+    // Polvo
+    polvoDorado.forEach((p) => {
         const d = p.userData;
         p.position.y = d.basePos.y + Math.sin(tiempo * d.velY + d.offset) * d.amplitud;
         p.position.x = d.basePos.x + Math.cos(tiempo * d.velY * 0.7 + d.offset) * d.amplitud * 0.5;
@@ -1252,10 +1205,9 @@ function animar() {
         m.position.x += m.userData.vel.x * delta;
         m.position.y += m.userData.vel.y * delta;
         
-        // Estela desvaneciéndose
         m.children.forEach((c, idx) => {
             if (idx > 0 && c.material) {
-                c.material.opacity = Math.max(0, c.material.opacity - delta * 0.3);
+                c.material.opacity = Math.max(0, c.material.opacity - delta * 0.2);
             }
         });
         
@@ -1265,8 +1217,7 @@ function animar() {
         }
     }
 
-    // Crear meteoros periódicamente
-    if (tiempo > 2 && Math.random() < (ES_MOVIL ? 0.006 : 0.012)) {
+    if (tiempo > 2 && Math.random() < (ES_MOVIL ? 0.004 : 0.01)) {
         meteoros.push(crearMeteoro());
     }
 
@@ -1275,20 +1226,13 @@ function animar() {
         const t = tiempo - fotoActual.userData.tiempoInicio;
         const p = Math.min(t / 2, 1);
         const f = easeOutBack(p);
-        fotoActual.position.z = -300 + 300 * f;
         fotoActual.rotation.y = Math.PI * 2 * (1 - f);
         const s = 0.1 + 0.9 * f;
         fotoActual.scale.set(s, s, s);
-
-        // Flotación sutil
-        if (p >= 1) {
-            fotoActual.position.y = Math.sin(tiempo * 0.8) * 1.2;
-            fotoActual.rotation.z = Math.sin(tiempo * 0.5) * 0.015;
-        }
         
-        // Aura pulsando
-        if (fotoActual.children[5]) {
-            fotoActual.children[5].material.opacity = 0.5 + Math.sin(tiempo * 2.5) * 0.25;
+        if (p >= 1) {
+            fotoActual.position.y = Math.sin(tiempo * 0.8) * 0.8;
+            fotoActual.rotation.z = Math.sin(tiempo * 0.5) * 0.01;
         }
 
         if (p >= 1 && !fotoActual.userData.textoEscrito) {
@@ -1307,7 +1251,7 @@ function animar() {
     objetivos.forEach((obj, i) => {
         if (!obj.userData.eliminado) {
             obj.userData.escalaBase = Math.min(1, obj.userData.escalaBase + 0.07);
-            const hover = obj.userData.hover ? 1.22 : 1;
+            const hover = obj.userData.hover ? 1.2 : 1;
             const escala = obj.userData.escalaBase * hover;
             obj.scale.set(escala, escala, escala);
             
@@ -1317,8 +1261,8 @@ function animar() {
             const phase = obj.userData.phase || 0;
             
             if (mov === 'orbitaLenta') {
-                obj.position.y = obj.userData.baseY + Math.sin(tiempo * 1.2 + phase) * 2;
-                obj.position.x = obj.userData.baseX + Math.cos(tiempo * 0.8 + phase) * 2;
+                obj.position.y = obj.userData.baseY + Math.sin(tiempo * 1.2 + phase) * 1.5;
+                obj.position.x = obj.userData.baseX + Math.cos(tiempo * 0.8 + phase) * 1.5;
             } else if (mov === 'parpadeo') {
                 obj.userData.proximoCambio -= delta;
                 if (obj.userData.proximoCambio <= 0) {
@@ -1326,25 +1270,24 @@ function animar() {
                     obj.userData.proximoCambio = 0.6 + Math.random() * 1.2;
                 }
                 obj.visible = obj.userData.visible;
-                obj.position.y = obj.userData.baseY + Math.sin(tiempo * 2 + i) * 1.5;
+                obj.position.y = obj.userData.baseY + Math.sin(tiempo * 2 + i) * 1.2;
             } else if (mov === 'orbitaRapida') {
-                obj.position.x = obj.userData.baseX + Math.cos(tiempo * 1.5 + phase) * 3;
-                obj.position.y = obj.userData.baseY + Math.sin(tiempo * 1.8 + phase) * 3;
+                obj.position.x = obj.userData.baseX + Math.cos(tiempo * 1.5 + phase) * 2.5;
+                obj.position.y = obj.userData.baseY + Math.sin(tiempo * 1.8 + phase) * 2.5;
             } else if (mov === 'flotante') {
-                obj.position.x = obj.userData.baseX + Math.sin(tiempo * 1.1 + i) * 4;
-                obj.position.y = obj.userData.baseY + Math.cos(tiempo * 1.4 + i * 0.7) * 3;
+                obj.position.x = obj.userData.baseX + Math.sin(tiempo * 1.1 + i) * 3;
+                obj.position.y = obj.userData.baseY + Math.cos(tiempo * 1.4 + i * 0.7) * 2;
                 obj.position.z = obj.userData.baseZ + Math.sin(tiempo * 0.9 + i * 1.2) * 2;
             } else {
-                obj.position.y = obj.userData.baseY + Math.sin(tiempo * 2 + i) * 1.5;
+                obj.position.y = obj.userData.baseY + Math.sin(tiempo * 2 + i) * 1.2;
             }
             
-            // Anillos pulsantes
             obj.children.forEach(child => {
                 if (child.userData.esAnilloPulso) {
                     child.rotation.x = Math.PI / 2 + Math.sin(tiempo * 1.5 + i) * 0.3;
                     child.rotation.z = tiempo * 0.5 + i;
-                    const s = 1 + Math.sin(tiempo * 3 + i) * 0.18;
-                    child.scale.set(s, s, s);
+                    const sc = 1 + Math.sin(tiempo * 3 + i) * 0.18;
+                    child.scale.set(sc, sc, sc);
                 }
             });
         } else {
@@ -1359,7 +1302,7 @@ function animar() {
     esferasFinales.forEach((e, i) => {
         if (!e.userData.eliminado) {
             e.userData.escalaBase = Math.min(1, e.userData.escalaBase + 0.07);
-            const hover = e.userData.hover ? 1.22 : 1;
+            const hover = e.userData.hover ? 1.2 : 1;
             const s = e.userData.escalaBase * hover;
             e.scale.set(s, s, s);
             e.rotation.y += 0.015;
@@ -1369,8 +1312,6 @@ function animar() {
                 if (child.userData.esAnilloPulso) {
                     child.rotation.x = Math.PI / 2 + Math.sin(tiempo * 1.5 + i) * 0.3;
                     child.rotation.z = tiempo * 0.5 + i;
-                    const sc = 1 + Math.sin(tiempo * 3 + i) * 0.18;
-                    child.scale.set(sc, sc, sc);
                 }
             });
         } else {
@@ -1398,24 +1339,24 @@ function animar() {
         }
     }
 
-    // Cámara shake
-    if (cameraShake > 0) {
+    // === CÁMARA ===
+    // Movimiento suave base + shake (NO acumulativo)
+    const swayX = Math.sin(tiempo * 0.15) * 2;
+    const swayY = Math.cos(tiempo * 0.1) * 1.5;
+    
+    let shakeX = 0, shakeY = 0;
+    if (cameraShake > 0.01) {
+        shakeX = (Math.random() - 0.5) * cameraShake;
+        shakeY = (Math.random() - 0.5) * cameraShake;
         cameraShake *= 0.9;
-        camera.position.x += (Math.random() - 0.5) * cameraShake;
-        camera.position.y += (Math.random() - 0.5) * cameraShake;
-        if (cameraShake < 0.01) cameraShake = 0;
     } else {
-        // Retorno suave a posición base
-        camera.position.x += (0 - camera.position.x) * 0.05;
-        camera.position.y += (0 - camera.position.y) * 0.05;
+        cameraShake = 0;
     }
-
-    // Movimiento cinematográfico de cámara (sutil)
-    if (estado !== 'intro') {
-        camera.position.x += Math.sin(tiempo * 0.2) * 0.008;
-        camera.position.y += Math.cos(tiempo * 0.15) * 0.008;
-        camera.lookAt(0, 0, 0);
-    }
+    
+    camera.position.x = swayX + shakeX;
+    camera.position.y = swayY + shakeY;
+    camera.position.z = CONFIG.cameraZ;
+    camera.lookAt(0, 0, 0);
 
     composer.render();
 }

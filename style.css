@@ -1,5 +1,22 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* ============ FONDO: GIF DE BAILE (marca de agua) ============ */
+#fondo-baile {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    z-index: 0;
+    opacity: 0.18;
+    pointer-events: none;
+    object-fit: cover;
+    filter: blur(1.5px) brightness(0.55);
+}
+
 html, body {
     background: #000;
     overflow: hidden;

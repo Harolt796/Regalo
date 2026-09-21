@@ -2,14 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Para Ti ❤️</title>
     <link rel="stylesheet" href="style.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -21,14 +19,18 @@
 
     <div id="canvas-container"></div>
 
-    <!-- Barra de instrucciones superior -->
+    <!-- HUD superior -->
     <div id="hud">
-        <div id="hud-icono">🎯</div>
-        <div id="hud-texto">Haz clic en los 3 corazones</div>
-        <div id="hud-contador">0 / 3</div>
+        <div id="hud-nivel">Nivel 1/5</div>
+        <div id="hud-icono">🔮</div>
+        <div id="hud-texto">Instrucción</div>
+        <div id="hud-info">
+            <div id="hud-contador">0/1</div>
+            <div id="hud-timer" class="oculto">20s</div>
+        </div>
     </div>
 
-    <!-- Puntos de progreso de fotos -->
+    <!-- Puntos de progreso -->
     <div id="progreso">
         <div class="punto"></div>
         <div class="punto"></div>
@@ -37,27 +39,30 @@
         <div class="punto"></div>
     </div>
 
-    <!-- Título y texto de la historia -->
+    <!-- Historia -->
     <div id="historia">
         <h1 id="historia-titulo"></h1>
         <p id="historia-texto"></p>
     </div>
 
-    <!-- Pantalla de bienvenida -->
+    <!-- Intro -->
     <div id="intro">
         <div class="intro-panel">
-            <h1>Bienvenida ❤️</h1>
-            <p>Este es un pequeño universo hecho para ti.</p>
-            <p>Para ver cada foto, tendrás que completar un desafío. ¡Vamos!</p>
-            <button id="btn-empezar">Empezar ✨</button>
+            <h1>Para Ti ❤️</h1>
+            <p>Este universo fue hecho especialmente para ti.</p>
+            <p>Completa 5 desafíos para desbloquear cada foto.</p>
+            <button id="btn-empezar">EMPEZAR ✨</button>
         </div>
     </div>
 
-    <!-- Código del desafío final -->
+    <!-- Código final -->
     <div id="codigo" class="oculto">
         <p>MEMORIZA EL ORDEN</p>
         <div id="codigo-colores"></div>
     </div>
+
+    <!-- Mensaje de error temporal -->
+    <div id="toast" class="oculto"></div>
 
     <script src="script.js"></script>
 </body>

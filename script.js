@@ -38,6 +38,9 @@ let corazonInicio = 0;
 let corazonMensajeMostrado = false;
 let heartStarted = false;
 
+// === MÚSICA ===
+let musicaDesbloqueada = false;
+
 const ES_MOVIL = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 const DPR = Math.min(window.devicePixelRatio || 1, 1.8);
 
@@ -85,6 +88,50 @@ function posicionSegura(indice, total) {
     const patron = patrones[total] || patrones[3];
     return patron[indice % patron.length];
 }
+
+// ============================================
+// MÚSICA — reproducción robusta para móvil
+// ============================================
+function intentarReproducirMusica(forzar = false) {
+    const musica = document.getElementById('musica-fondo');
+    if (!musica) return;
+    if (musicaDesbloqueada && !forzar) return;
+    
+    musica.volume = 0.4;
+    musica.muted = false;
+    
+    const intento = musica.play();
+    if (intento !== undefined) {
+        intento
+            .then(() => {
+                musicaDesbloqueada = true;
+                console.log('✅ Música reproduciéndose');
+            })
+            .catch(err => {
+                console.log('⚠️ Aún bloqueada, se reintentará en el próximo toque:', err.message || err);
+            });
+    }
+}
+
+// Reintentar en CUALQUIER interacción del usuario hasta que suene
+['touchstart', 'touchend', 'click', 'pointerdown', 'keydown'].forEach(evt => {
+    document.addEventListener(evt, () => {
+        const musica = document.getElementById('musica-fondo');
+        if (musica && musica.paused) {
+            intentarReproducirMusica();
+        }
+    }, { passive: true });
+});
+
+// Reanudar al volver a la pestaña
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && musicaDesbloqueada) {
+        const musica = document.getElementById('musica-fondo');
+        if (musica && musica.paused) {
+            musica.play().catch(() => {});
+        }
+    }
+});
 
 // ============================================
 // INIT
@@ -154,9 +201,9 @@ function init() {
     }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
 
+    // ⭐ Usar 'click' en lugar de 'pointerdown' — más confiable para el gesto de audio
     const btn = document.getElementById('btn-empezar');
-    btn.addEventListener('pointerdown', empezar);
-    btn.addEventListener('click', (e) => e.preventDefault());
+    btn.addEventListener('click', empezar);
 
     animar();
 }
@@ -412,16 +459,13 @@ function crearPolvoDorado() {
 // EMPEZAR (con música)
 // ============================================
 function empezar(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     document.getElementById('intro').classList.add('oculto');
     document.getElementById('progreso').classList.add('visible');
     document.getElementById('hud').classList.add('visible');
     
-    const musica = document.getElementById('musica-fondo');
-    if (musica) {
-        musica.volume = 0.4;
-        musica.play().catch(err => console.log('Audio bloqueado por el navegador:', err));
-    }
+    // ⭐ Forzar reproducción dentro del gesto del usuario
+    intentarReproducirMusica(true);
     
     estado = 'cargando';
     setTimeout(() => mostrarFoto(0), 400);

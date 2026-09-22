@@ -23,8 +23,10 @@
 
     <img id="fondo-baile" src="Baile.gif" alt="Fondo">
 
-    <audio id="musica-fondo" loop>
+    <!-- ⭐ preload + playsinline son CLAVE para móvil -->
+    <audio id="musica-fondo" loop preload="auto" playsinline webkit-playsinline>
         <source src="Musica.mp3" type="audio/mpeg">
+        Tu navegador no soporta audio.
     </audio>
 
     <div id="canvas-container"></div>
